@@ -7,10 +7,7 @@ import requests
 import bs4 as bs
 import numpy as np
 import yfinance as yf
-import pandas_datareader.data as web
 
-from datetime import datetime
-from edgar import Edgar, Company
 from datetime import datetime, timedelta
 
 
@@ -41,6 +38,7 @@ def get_sp500_symbols_wiki(
                           ' Chrome/24.0.1312.27 Safari/537.17'
         }
 
+    # Query the list of companies included in the S&P 500 index from Wikipedia
     resp = requests.get(url, headers=headers)
     soup = bs.BeautifulSoup(resp.text, 'lxml')
     table = soup.find('table', {'class': 'wikitable sortable'})
@@ -91,23 +89,49 @@ def get_nasdaq_listed_symbols(
     return symbols, names
 
 
-def get_quotes(symbol: str, start_date: str, end_date: str = None,
-               data_source: str = 'yahoo') -> dict:
+def get_asset_data(symbol: str, start_date: str, end_date: str = None,
+                   quote_channels: (str, ...) = ('Adj Close', ...),
+                   adjust_prices: bool = True) -> (dict, dict):
     """
-    Get stock quotes between a date range.
+    Get data related to a specific asset between a given date range.
+    The returned data includes stock quotes between the given date range
 
     :param symbol: (str) The symbol of the stock for which data is to be queried
     :param start_date: (str) Starting date, should be formatted as 'year-month-day'".
     :param end_date: (str) Ending date, should be formatted as 'year-month-day'".
     If None uses today's date. Defualts to None.
-    :param data_source: (str) Either 'yahoo' or 'pandas'.
-     Specify the source from which to query the data from. Defaults to yahoo.
+    :param quote_channels: (Tuple) Tuple of strings, where each element should denote a
+    quote channel to query stock prices by. The available channels are:
+    'Close', 'Open', 'Low', 'High', 'Volume'.
+    :param adjust_prices: (bool) Whether to adjust the Close/Open/High/Low quotes,
+    defaults to True.
 
-    :return:
+    :return: (Tuple) Tuple containing two dicts:
+
+    the first one containing all requested quotes, keyed by the requested
+    'quote_channels', and 'dates' which contains the temporal axis for example:
+     'Close': NumPy array containing the Adj. Closing prices
+     'Volume': NumPy array containing the trading volumes
+     'Dates': NumPy array containing the trading volumes
+
+    The second dictionary contains macro data for the asset, with the following keys:
+    'name': Company name
+    'sector': Company sector
+    'beta': Volatility / Systematic Risk
+    'dividend_rate': The total annual expected dividend payments
+    'five_years_div_yield': Average annual dividend payments / stock price,
+     averaged over the last 5 years.
+    'trailing_price2earnings': Price to Earnings ratio, averaged over the last 12 months
+    'trailing_price2sales': Price to Sales ratio, averaged over the last 12 months
+    'book2value_ratio': Price to Book Value ratio, averaged over the last 12 months
+    'profit_margins': Profit margins (Total Profit / Total Revenues)
+    'high_52w': Highest market price in past 52 weeks
+    'low_52w': Lowest market price in past 52 weeks
+    'change_52w': Change in the asset market price over the past 52 weeks, in %.
+    'last_dividend_date': Date in which the last dividend was paid
+    'earnings_quarterly_growth': The amount by which the earnings in a quarter exceed
+    the earnings in a corresponding quarter from a previous year, in %.
     """
-
-    assert data_source in ('yahoo', 'pandas'), \
-        f"{data_source} must be either 'yahoo' or 'pandas'"
 
     datetime_format = "%Y-%m-%d"
     start_date = datetime.strptime(start_date, datetime_format)
@@ -118,67 +142,42 @@ def get_quotes(symbol: str, start_date: str, end_date: str = None,
     else:
         end_date = datetime.strptime(end_date, datetime_format)
 
-    meta_data = yf.Ticker(symbol)
+    # Initialize the ticker
+    ticker = yf.Ticker(symbol)
 
-    try:
-        data_reader = web.DataReader(name=symbol, data_source=data_source,
-                                     start=start_date, end=end_date)
-
-    except:
-        print(f"Could not load data for {symbol}")
-
-    quote = {
-        'PB': price_to_book,
-        'PE': price_to_earnings,
-        'DivYield': dividend_yield,
-        '1YearDivRate': one_yr_dividend_rate,
-        '5YearsAvgDivYield': five_yr_dividend_rate,
-        'ProfitMargins': profit_margins
+    # Query macro data
+    macro = {
+        'name': ticker.info['shortName'],
+        'sector': ticker.info['sector'],
+        'beta': ticker.info['beta'],
+        'dividend_rate': ticker.info['dividendRate'],
+        'five_years_div_yield': ticker.info['fiveYearAvgDividendYield'],
+        'trailing_price2earnings': ticker.info['trailingPE'],
+        'trailing_price2sales': ticker.info['priceToSalesTrailing12Months'],
+        'book2value_ratio': ticker.info['priceToBook'],
+        'profit_margins': ticker.info['profitMargins'],
+        'high_52w': ticker.info['fiftyTwoWeekHigh'],
+        'low_52w': ticker.info['fiftyTwoWeekLow'],
+        'change_52w': ticker.info['52WeekChange'],
+        'last_dividend_date': datetime.fromtimestamp(ticker.info['lastDividendDate']),
+        'earnings_quarterly_growth': ticker.info['earningsQuarterlyGrowth'],
     }
 
-    return quote
+    # Query historical quote prices
+    quotes = ticker.history(start=start_date, end=end_date,
+                            prepost=False, actions=False,
+                            auto_adjust=adjust_prices, back_adjust=False,
+                            rounding=False)
 
+    # Get the temporal axis
+    dates = [str(t).split('T')[0] for t in quotes[quote_channels[0]].index.values]
 
-def get_edgar_fillings(company_name: str, filling_type: str = None,
-                       cik_num:  str = None, no_of_documents: int = 10):
-    """
+    # Get the financial quotes
+    quotes = {channel: quotes[channel].values
+              for channel in quote_channels}
+    quotes['Dates'] = dates
 
-    :param company_name:
-    :param filling_type:
-    :param cik_num:
-    :param no_of_documents:
-    :return:
-    """
-
-    if cik_num is None:
-        edgar = Edgar()
-        company_name = edgar.find_company_name(company_name)[0]
-        cik_num = edgar.get_cik_by_company_name(company_name)
-
-        company = Company(company_name, cik_num)
-
-        if filling_type is not None:
-            tree = company.get_all_filings(filing_type=filling_type)
-
-        else:
-            tree = company.get_all_filings()
-
-        docs = company.get_documents(tree=tree, no_of_documents=no_of_documents)
-        info = company.get_company_info()
-
-    else:
-        company = Company(company_name, cik_num)
-
-        if filling_type is not None:
-            tree = company.get_all_filings(filing_type=filling_type)
-
-        else:
-            tree = company.get_all_filings()
-
-        docs = company.get_documents(tree=tree, no_of_documents=no_of_documents)
-        info = company.get_company_info()
-
-    return tree, docs, info
+    return quotes, macro
 
 
 def get_sp500_assets(analysis_period_len: int = 1825, data_source: str = 'yahoo',

@@ -145,6 +145,8 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     ticker = yf.Ticker(symbol)
 
     # Query macro data
+    last_dividend_date = (datetime.fromtimestamp(ticker.info['lastDividendDate'])
+                          if isinstance(ticker.info['lastDividendDate'], int) else None)
     macro = {
         'name': ticker.info['shortName'],
         'sector': ticker.info['sector'],
@@ -158,7 +160,7 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
         'high_52w': ticker.info['fiftyTwoWeekHigh'],
         'low_52w': ticker.info['fiftyTwoWeekLow'],
         'change_52w': ticker.info['52WeekChange'],
-        'last_dividend_date': datetime.fromtimestamp(ticker.info['lastDividendDate']),
+        'last_dividend_date': last_dividend_date,
         'earnings_quarterly_growth': ticker.info['earningsQuarterlyGrowth'],
     }
 
@@ -177,6 +179,64 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     quotes['Dates'] = dates
 
     return quotes, macro
+
+
+def _load_multiple_assets(symbols_list: (str, ...), start_date: str,
+                          end_date: str = None,
+                          quote_channels: (str, ...) = ('Adj Close', ...),
+                          adjust_prices: bool = True) -> (dict, [dict, ...]):
+    """
+    A utility method for loading  N multiple assets,
+    used by the get_multiple_assets method.
+
+    :param symbols_list: (Tuple) A tuple with all of the symbols of the stocks
+    for which data is to be queried.
+    :param start_date: (str) Starting date, should be formatted as 'year-month-day'".
+    :param end_date: (str) Ending date, should be formatted as 'year-month-day'".
+    If None uses today's date. Defualts to None.
+    :param quote_channels: (Tuple) Tuple of strings, where each element should denote a
+    quote channel to query stock prices by. The available channels are:
+    'Close', 'Open', 'Low', 'High', 'Volume'.
+    :param adjust_prices: (bool) Whether to adjust the Close/Open/High/Low quotes,
+    defaults to True.
+
+    :return: (Tuple) A tuple.
+
+    The first element is a dictionary, keyed by the requested
+    'quote_channels', and 'Dates' which contains the temporal axis for example.
+    Each key contains a NumPy ndarray object of shape (N, T), where N is the
+    number of assets and T is the number of trading days.
+
+    The second element contains a list of N dicts, where each dict contains the
+    macros of the respective asset in symbols_list/
+    """
+
+    # Load all requested assets
+    quotes = []
+    macros = []
+    for symbol in symbols_list:
+        print(f"Loading data for {symbol}")
+
+        try:
+            quote, macro = get_asset_data(symbol=symbol, start_date=start_date,
+                                          end_date=end_date,
+                                          quote_channels=quote_channels,
+                                          adjust_prices=adjust_prices)
+            quotes.append(quote)
+            macros.append(macro)
+
+        except ValueError:
+            print(f"Could not load the data for {symbol}")
+
+    # Concatenate the quotes NumPy arrays
+    dates = quotes[0]['Dates']
+    quotes = {
+        channel: np.concatenate([np.expand_dims(q[channel], 1) for q in quotes], 1)
+        for channel in quote_channels if channel != 'Dates'
+    }
+    quotes['Dates'] = dates
+
+    return quotes, macros
 
 
 def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str = None,
@@ -212,53 +272,39 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
     """
 
     # Generate cache signature
-    input_dict = {
-        'symbols_list': symbols_list,
-        'start_date': start_date,
-        'end_date': end_date,
-        'quote_channels': quote_channels,
-        'adjust_prices': adjust_prices,
-    }
-    hash_signature = dict_hash(input_dict)
-    data_file = os.path.join(cache_path, (hash_signature + '.pkl'))
-
     if cache_path is not None:
+        input_dict = {
+            'symbols_list': symbols_list,
+            'start_date': start_date,
+            'end_date': end_date,
+            'quote_channels': quote_channels,
+            'adjust_prices': adjust_prices,
+        }
+        hash_signature = dict_hash(input_dict)
+        data_file = os.path.join(cache_path, (hash_signature + '.pkl'))
+
         # Check if the data was already cached
         if os.path.isfile(data_file):
             with open(data_file, 'rb') as f:
                 cached_data = pickle.load(f)
                 quotes, macros = cached_data['quotes'], cached_data['macros']
 
-    else:
-        # Load all requested assets
-        quotes = []
-        macros = []
-        for symbol in symbols_list:
-            print(f"Fetching Data for {symbol}")
+        else:
+            quotes, macros = _load_multiple_assets(symbols_list=symbols_list,
+                                                   start_date=start_date,
+                                                   end_date=end_date,
+                                                   quote_channels=quote_channels,
+                                                   adjust_prices=adjust_prices)
 
-            try:
-                quote, macro = get_asset_data(symbol=symbol, start_date=start_date,
-                                              end_date=end_date,
-                                              quote_channels=quote_channels,
-                                              adjust_prices=adjust_prices)
-                quotes.append(quote)
-                macros.append(macro)
-
-            except ValueError:
-                print(f"Could not load the data for {symbol}")
-
-        # Concatenate the quotes NumPy arrays
-        quotes = {
-            channel: np.concatenate([np.expand_dims(q[channel], 1) for q in quotes], 1)
-            for channel in quote_channels
-        }
-
-        if cache_path is not None:
             with open(data_file, 'wb') as f:
-                pickle.dump(obj={
-                    'quotes': quotes,
-                    'macros': macros,
-                }, file=f)
+                pickle.dump(obj={'quotes': quotes, 'macros': macros}, file=f)
+
+    else:
+        quotes, macros = _load_multiple_assets(symbols_list=symbols_list,
+                                               start_date=start_date,
+                                               end_date=end_date,
+                                               quote_channels=quote_channels,
+                                               adjust_prices=adjust_prices)
 
     return quotes, macros
 

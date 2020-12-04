@@ -1,3 +1,6 @@
+from src import PROJECT_ROOT
+
+import os
 import pytest
 
 
@@ -19,6 +22,24 @@ def get_quote_params():
     return params
 
 
+@pytest.fixture
+def get_multple_quotes_params():
+    symbols_list = ('MSFT', 'GOOGL', 'AAPL')
+    start_date = "2010-01-01"
+    end_date = "2011-01-01"
+    quote_channels = ('Close', 'Open', 'High', 'Low', 'Volume')
+    adjust_prices = True
+    cache_path = os.path.join(PROJECT_ROOT, 'data', 'tmp_test')
+    os.makedirs(cache_path, exist_ok=True)
 
+    params = {
+        'symbols_list': symbols_list,
+        'start_date': start_date,
+        'end_date': end_date,
+        'quote_channels': quote_channels,
+        'adjust_prices': adjust_prices,
+        'cache_path': cache_path,
+    }
 
+    return params
 

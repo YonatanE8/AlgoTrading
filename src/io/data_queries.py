@@ -1,5 +1,6 @@
 from typing import Dict
-
+from datetime import datetime
+from src.utils.hashing import dict_hash
 
 import os
 import pickle
@@ -7,8 +8,6 @@ import requests
 import bs4 as bs
 import numpy as np
 import yfinance as yf
-
-from datetime import datetime, timedelta
 
 
 def get_sp500_symbols_wiki(
@@ -109,7 +108,7 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     :return: (Tuple) Tuple containing two dicts:
 
     the first one containing all requested quotes, keyed by the requested
-    'quote_channels', and 'dates' which contains the temporal axis for example:
+    'quote_channels', and 'Dates' which contains the temporal axis for example:
      'Close': NumPy array containing the Adj. Closing prices
      'Volume': NumPy array containing the trading volumes
      'Dates': NumPy array containing the trading volumes
@@ -180,95 +179,88 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     return quotes, macro
 
 
-def get_sp500_assets(analysis_period_len: int = 1825, data_source: str = 'yahoo',
-                     metric2_analyze: str = 'Close', start_date: str = None):
+def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str = None,
+                        quote_channels: (str, ...) = ('Adj Close', ...),
+                        adjust_prices: bool = True,
+                        cache_path: str = None) -> (dict, [dict, ...]):
+    """
+    A method for querying N multiple assets and caching them if required.
+    Wraps around the 'get_asset_data' method.
+
+    :param symbols_list: (Tuple) A tuple with all of the symbols of the stocks
+    for which data is to be queried.
+    :param start_date: (str) Starting date, should be formatted as 'year-month-day'".
+    :param end_date: (str) Ending date, should be formatted as 'year-month-day'".
+    If None uses today's date. Defualts to None.
+    :param quote_channels: (Tuple) Tuple of strings, where each element should denote a
+    quote channel to query stock prices by. The available channels are:
+    'Close', 'Open', 'Low', 'High', 'Volume'.
+    :param adjust_prices: (bool) Whether to adjust the Close/Open/High/Low quotes,
+    defaults to True.
+    :param cache_path: (str) Path to the directory in which to cache / look for cached
+    data, if None does not use caching. Default is None.
+
+    :return: (Tuple) A tuple.
+
+    The first element is a dictionary, keyed by the requested
+    'quote_channels', and 'Dates' which contains the temporal axis for example.
+    Each key contains a NumPy ndarray object of shape (N, T), where N is the
+    number of assets and T is the number of trading days.
+
+    The second element contains a list of N dicts, where each dict contains the
+    macros of the respective asset in symbols_list/
     """
 
-    :param analysis_period_len:
-    :param data_source:
-    :param metric2_analyze:
-    :param start_date:
-    :return:
-    """
+    # Generate cache signature
+    input_dict = {
+        'symbols_list': symbols_list,
+        'start_date': start_date,
+        'end_date': end_date,
+        'quote_channels': quote_channels,
+        'adjust_prices': adjust_prices,
+    }
+    hash_signature = dict_hash(input_dict)
+    data_file = os.path.join(cache_path, (hash_signature + '.pkl'))
 
-    # Get all tickers
-    sp500_tickers, sp500_names = get_sp500_symbols_wiki()
-
-    # Get period to analyze
-    if start_date is None:
-        today = datetime.today()
-
-    else:
-        today = datetime.strptime(start_date, "%Y-%m-%d")
-
-    yesterday = today - timedelta(days=1)
-    first_day = yesterday - timedelta(days=analysis_period_len)
-
-    yesterday = str(yesterday).split(' ')[0]
-    first_day = str(first_day).split(' ')[0]
-
-    start_date = datetime.strptime(first_day, "%Y-%m-%d")
-    end_date = datetime.strptime(yesterday, "%Y-%m-%d")
-
-    data_file = os.path.join(DATA_DIR,
-                             f"{str(start_date).split()[0].replace('-', '_')}_to_"
-                             f"{str(end_date).split()[0].replace('-', '_')}_"
-                             f"{metric2_analyze}.pkl")
-
-    if os.path.isfile(data_file):
-        with open(data_file, 'rb') as f:
-            res_dict = pickle.load(f)
-
-            sp500_tickers = res_dict['sp500_tickers']
-            tickers_data = res_dict['tickers_data']
-            tickers_meta_data = res_dict['tickers_meta_data']
+    if cache_path is not None:
+        # Check if the data was already cached
+        if os.path.isfile(data_file):
+            with open(data_file, 'rb') as f:
+                cached_data = pickle.load(f)
+                quotes, macros = cached_data['quotes'], cached_data['macros']
 
     else:
-        if data_source == 'quandl':
-            api_token = quandl_api_toekn
+        # Load all requested assets
+        quotes = []
+        macros = []
+        for symbol in symbols_list:
+            print(f"Fetching Data for {symbol}")
 
-        elif data_source == 'iex':
-            api_token = iex_api_token
-
-        else:
-            api_token = None
-
-        # Get the SP500 data
-        tickers_data = []
-        tickers_meta_data = []
-        for ticker in sp500_tickers:
-            print(f"Fetching Data for {ticker}")
             try:
-                ticker_qoute = get_quotes(symbol=ticker, start_date=start_date,
-                                          end_date=end_date, data_source=data_source,
-                                          api_key=api_token)
+                quote, macro = get_asset_data(symbol=symbol, start_date=start_date,
+                                              end_date=end_date,
+                                              quote_channels=quote_channels,
+                                              adjust_prices=adjust_prices)
+                quotes.append(quote)
+                macros.append(macro)
 
-                tickers_data.append(np.expand_dims(
-                    ticker_qoute[0][metric2_analyze].values, 1))
-                tickers_meta_data.append(ticker_qoute[1])
+            except ValueError:
+                print(f"Could not load the data for {symbol}")
 
-            except:
-                print(f"Could not load the data for {ticker}")
-
-        n_days = [t.shape[0] for t in tickers_data]
-        max_days = np.max(n_days)
-        relevant_tickers = [i for i in range(len(tickers_data))
-                            if tickers_data[i].shape[0] == max_days]
-        tickers_data = [tickers_data[i] for i in relevant_tickers]
-        sp500_tickers = [sp500_tickers[i] for i in relevant_tickers]
-        tickers_meta_data = [tickers_meta_data[i] for i in relevant_tickers]
-        tickers_data = np.concatenate(tickers_data, 1)
-
-        res_dict = {
-            'sp500_tickers': sp500_tickers,
-            'tickers_data': tickers_data,
-            'tickers_meta_data': tickers_meta_data,
+        # Concatenate the quotes NumPy arrays
+        quotes = {
+            channel: np.concatenate([np.expand_dims(q[channel], 1) for q in quotes], 1)
+            for channel in quote_channels
         }
 
-        with open(data_file, 'wb') as f:
-            pickle.dump(obj=res_dict, file=f)
+        if cache_path is not None:
+            with open(data_file, 'wb') as f:
+                pickle.dump(obj={
+                    'quotes': quotes,
+                    'macros': macros,
+                }, file=f)
 
-    return sp500_tickers, tickers_data, tickers_meta_data, sp500_names
+    return quotes, macros
 
 
 

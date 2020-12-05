@@ -59,7 +59,7 @@ def get_exp_smooth_params():
 
 @pytest.fixture
 def get_holt_winters_smoothing_params():
-    trend = None
+    trend = 'additive'
 
     params = {
         'trend': trend,

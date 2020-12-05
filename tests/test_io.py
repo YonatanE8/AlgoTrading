@@ -3,7 +3,7 @@ from src.utils.hashing import dict_hash
 from src.io.data_queries import (
     get_sp500_symbols_wiki,
     get_nasdaq_listed_symbols,
-    get_asset_data,
+    _load_asset_data,
     get_multiple_assets,
 )
 
@@ -42,7 +42,7 @@ class TestDataQueries:
             assert names[i][-1] != ' '
 
     def test_get_quotes(self, get_quote_params):
-        quotes, macros = get_asset_data(**get_quote_params)
+        quotes, macros = _load_asset_data(**get_quote_params)
 
         assert 'Dates' in quotes
         assert len(quotes['Dates']) == 253

@@ -88,12 +88,13 @@ def get_nasdaq_listed_symbols(
     return symbols, names
 
 
-def get_asset_data(symbol: str, start_date: str, end_date: str = None,
-                   quote_channels: (str, ...) = ('Adj Close', ...),
-                   adjust_prices: bool = True) -> (dict, dict):
+def _load_asset_data(symbol: str, start_date: str, end_date: str = None,
+                     quote_channels: (str, ...) = ('Adj Close', ...),
+                     adjust_prices: bool = True) -> (dict, dict):
     """
-    Get data related to a specific asset between a given date range.
-    The returned data includes stock quotes between the given date range
+    Utility method, which actually gets the data related to a specific asset between
+    a given date range. The returned data includes stock quotes between the given
+    date range
 
     :param symbol: (str) The symbol of the stock for which data is to be queried
     :param start_date: (str) Starting date, should be formatted as 'year-month-day'".
@@ -188,6 +189,91 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     return quotes, macro
 
 
+def get_asset_data(symbol: str, start_date: str, end_date: str = None,
+                   quote_channels: (str, ...) = ('Adj Close', ...),
+                   adjust_prices: bool = True,
+                   cache_path: str = None) -> (dict, [dict, ...]):
+    """
+    Wrapper method around _load_asset_data, which either uses cached data if available,
+    otherwise calls _load_asset_data in order to query data.
+
+    :param symbol: (str) The symbol of the stock for which data is to be queried
+    :param start_date: (str) Starting date, should be formatted as 'year-month-day'".
+    :param end_date: (str) Ending date, should be formatted as 'year-month-day'".
+    If None uses today's date. Defualts to None.
+    :param quote_channels: (Tuple) Tuple of strings, where each element should denote a
+    quote channel to query stock prices by. The available channels are:
+    'Close', 'Open', 'Low', 'High', 'Volume'.
+    :param adjust_prices: (bool) Whether to adjust the Close/Open/High/Low quotes,
+    defaults to True.
+    :param cache_path: (str) Path to the directory in which to cache / look for cached
+    data, if None does not use caching. Default is None.
+
+    :return: (Tuple) Tuple containing two dicts:
+
+    the first one containing all requested quotes, keyed by the requested
+    'quote_channels', and 'Dates' which contains the temporal axis for example:
+     'Close': NumPy array containing the Adj. Closing prices
+     'Volume': NumPy array containing the trading volumes
+     'Dates': NumPy array containing the trading volumes
+
+    The second dictionary contains macro data for the asset, with the following keys:
+    'name': Company name
+    'sector': Company sector
+    'beta': Volatility / Systematic Risk
+    'dividend_rate': The total annual expected dividend payments
+    'five_years_div_yield': Average annual dividend payments / stock price,
+     averaged over the last 5 years.
+    'trailing_price2earnings': Price to Earnings ratio, averaged over the last 12 months
+    'trailing_price2sales': Price to Sales ratio, averaged over the last 12 months
+    'book2value_ratio': Price to Book Value ratio, averaged over the last 12 months
+    'profit_margins': Profit margins (Total Profit / Total Revenues)
+    'high_52w': Highest market price in past 52 weeks
+    'low_52w': Lowest market price in past 52 weeks
+    'change_52w': Change in the asset market price over the past 52 weeks, in %.
+    'last_dividend_date': Date in which the last dividend was paid
+    'earnings_quarterly_growth': The amount by which the earnings in a quarter exceed
+    the earnings in a corresponding quarter from a previous year, in %.
+    """
+
+    # Generate cache signature
+    if cache_path is not None:
+        input_dict = {
+            'symbol': symbol,
+            'start_date': start_date,
+            'end_date': end_date,
+            'quote_channels': quote_channels,
+            'adjust_prices': adjust_prices,
+        }
+        hash_signature = dict_hash(input_dict)
+        data_file = os.path.join(cache_path, (hash_signature + '.pkl'))
+
+        # Check if the data was already cached
+        if os.path.isfile(data_file):
+            with open(data_file, 'rb') as f:
+                cached_data = pickle.load(f)
+                quotes, macros = cached_data['quotes'], cached_data['macros']
+
+        else:
+            quotes, macros = _load_asset_data(symbol=symbol,
+                                              start_date=start_date,
+                                              end_date=end_date,
+                                              quote_channels=quote_channels,
+                                              adjust_prices=adjust_prices)
+
+            with open(data_file, 'wb') as f:
+                pickle.dump(obj={'quotes': quotes, 'macros': macros}, file=f)
+
+    else:
+        quotes, macros = _load_asset_data(symbol=symbol,
+                                          start_date=start_date,
+                                          end_date=end_date,
+                                          quote_channels=quote_channels,
+                                          adjust_prices=adjust_prices)
+
+    return quotes, macros
+
+
 def _load_multiple_assets(symbols_list: (str, ...), start_date: str,
                           end_date: str = None,
                           quote_channels: (str, ...) = ('Adj Close', ...),
@@ -225,10 +311,10 @@ def _load_multiple_assets(symbols_list: (str, ...), start_date: str,
         print(f"Loading data for {symbol}")
 
         try:
-            quote, macro = get_asset_data(symbol=symbol, start_date=start_date,
-                                          end_date=end_date,
-                                          quote_channels=quote_channels,
-                                          adjust_prices=adjust_prices)
+            quote, macro = _load_asset_data(symbol=symbol, start_date=start_date,
+                                            end_date=end_date,
+                                            quote_channels=quote_channels,
+                                            adjust_prices=adjust_prices)
             quotes.append(quote)
             macros.append(macro)
 
@@ -314,6 +400,3 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
                                                adjust_prices=adjust_prices)
 
     return quotes, macros
-
-
-

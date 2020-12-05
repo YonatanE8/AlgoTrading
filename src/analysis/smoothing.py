@@ -49,6 +49,10 @@ class Smoother(ABC):
         self.trend = trend
         self.poly_degree = poly_degree
 
+        # Initialize placeholder for future use by forecasters
+        self.poly = None
+        self.exp_smoother = None
+
     def _running_window_smoothing(self, time_series: np.ndarray) -> np.ndarray:
         """
         Utility method which takes in a NumPy array representing a time-series,
@@ -86,6 +90,7 @@ class Smoother(ABC):
             exp_smooth = SimpleExpSmoothing(time_series).fit(smoothing_level=self.alpha,
                                                              optimized=False)
 
+        self.exp_smoother = exp_smooth
         smoothed_time_series = exp_smooth.fittedvalues
 
         return smoothed_time_series
@@ -102,6 +107,7 @@ class Smoother(ABC):
 
         exp_smooth = ExponentialSmoothing(time_series, damped=False,
                                           trend=self.trend).fit()
+        self.exp_smoother = exp_smooth
         smoothed_time_series = exp_smooth.fittedvalues
 
         return smoothed_time_series
@@ -119,7 +125,7 @@ class Smoother(ABC):
 
         x = np.arange(len(time_series))
         poly = Polynomial.fit(x, time_series, deg=self.poly_degree)
-
+        self.poly = poly
         fitted_time_series = poly(x)
 
         return fitted_time_series

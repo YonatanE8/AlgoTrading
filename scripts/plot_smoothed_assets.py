@@ -1,14 +1,14 @@
 from src import PROJECT_ROOT
 from src.io.data_queries import get_multiple_assets
-from src.visualizations.plot_assets import plot_assets_list
+from src.analysis.statistical_analysis import Smoother
+from src.visualizations.plot_assets import plot_smooth_assets_list
 
 import os
-
 
 symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
 start_date = "2015-12-03"
 end_date = "2020-12-03"
-quote_channels = ('Close', )
+quote_channels = ('Close',)
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 quotes, macros = get_multiple_assets(symbols_list=symbols_list, start_date=start_date,
@@ -18,6 +18,13 @@ quotes, macros = get_multiple_assets(symbols_list=symbols_list, start_date=start
 assets_data = [quotes[quote_channels[0]][:, i]
                for i in range(quotes[quote_channels[0]].shape[1])]
 dates = quotes['Dates']
-plot_assets_list(assets_symbols=symbols_list, assets_data=assets_data,
-                 dates=dates, assets_meta_data=macros)
-
+smoothers = [
+    Smoother(method='avg', length=15),
+    Smoother(method='exp', optimize=True),
+    Smoother(method='holt_winter', trend=None),
+]
+linewidth = 0.2
+markersize = 0.5
+plot_smooth_assets_list(assets_symbols=symbols_list, assets_data=assets_data,
+                        smoothers=smoothers, dates=dates, assets_meta_data=macros,
+                        linewidth=linewidth, markersize=markersize)

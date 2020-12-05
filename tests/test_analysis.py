@@ -1,5 +1,5 @@
-from src.io.data_queries import get_asset_data
 from src.analysis.smoothing import Smoother
+from src.analysis.forecasting import Forecaster
 
 import pytest
 import numpy as np
@@ -58,4 +58,38 @@ class TestSmoother:
         # Polyfit should fit the data perfectly
         diff = np.abs(time_series - smoothed)
         assert np.sum(diff) == pytest.approx(0, abs=1e-3)
+
+
+class TestForecaster:
+    def test_forecast_exp(self, get_forecasting_data):
+        forecast_horizon = 5
+        x, y = get_forecasting_data
+
+        # Instantiate a Smoother
+        smoother = Smoother(method='exp', optimize=True)
+
+        # Fit the smoother
+        smoothed = smoother(y[-forecast_horizon:])
+
+        # Instantiate a Forecaster
+        forecaster = Forecaster(method='smoother', forecast_horizon=forecast_horizon,
+                                smoother=smoother)
+
+        # Generate forecast
+        forecast = forecaster.forecast(y[-forecast_horizon:])
+
+        # Check size
+        assert len(forecast) == forecast_horizon
+
+        # Forecast should be accurate roughly up to the scale of the i.i.d noise
+
+
+    def test_forecast_holt_winters(self, get_forecasting_data):
+        pass
+
+    def test_forecast_poly(self, get_forecasting_data):
+        pass
+
+    def test_arima_forecast(self, get_forecasting_data):
+        pass
 

@@ -118,3 +118,17 @@ def get_fit_polyfit_params():
 
     return params
 
+
+@pytest.fixture
+def get_forecasting_data():
+    noise_scale = 0.1
+    window_length = 100000
+    trend = np.linspace(start=-2, stop=2, num=window_length)
+    scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
+    offset = np.random.uniform(low=-2, high=2, size=(1, ))
+    noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+
+    x = offset + scale * trend
+    y = x + noise
+
+    return x, y

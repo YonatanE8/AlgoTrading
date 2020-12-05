@@ -1,53 +1,134 @@
+from abc import ABC
 from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
+from scipy.signal import convolve
 
 import numpy as np
 
 
-def exponential_smoothing(time_series: np.ndarray, alpha: float = 0.6,
-                          optimize: bool = False) -> np.ndarray:
+class Smoother(ABC):
     """
-    This method takes in a NumPy array representing a time-series, and output the
-    exponentially smoothed time series, of the same shape,
-    according to the specified parameters.
-
-    :param time_series: (NumPy array) The time-series to smooth
-    :param alpha: (float) smoothing factor, only used if 'optimize' is False.
-    Default is 0.6.
-    :param optimize: (bool) Whether to compute the optimal alpha by minimizing the SSE
-    function from the observations. Default is False
-
-    :return: (NumPy array) The smoothed time-series
+    Class for managing all smoothing methods for a 1D time series
     """
 
-    if optimize:
-        exp_smooth = SimpleExpSmoothing(time_series).fit(optimized=True)
+    def __init__(self, method: str = 'avg', length: int = 5, alpha: float = 0.6,
+                 optimize: bool = False, trend: str = None):
+        """
+        Constructor for the Smoother class, determines the smoothing method and its
+        parameters
 
-    else:
-        exp_smooth = SimpleExpSmoothing(time_series).fit(smoothing_level=alpha,
-                                                         optimized=False)
+        :param method: (str) Method to use for smoothing, can be one of:
+        'avg': Averaging over a running window,
+        'exp': Exponential smoothing,
+        'holt_winter': Exponential smoothing using the Holt-Winter method,
+        :param length: (int) Used with the 'avg' method. The length of the
+         averaging window in days. Default is 5 (i.e. trading week).
+        :param alpha: (float) Used with the 'exp' method. The smoothing factor,
+        only used if 'optimize' is False. Default is 0.6.
+        :param optimize: (bool) Used with the 'exp' method. Determines whether to
+        compute the optimal alpha by minimizing the SSE function from the observations.
+        Default is False
+        :param trend: (str) Used with the 'holt_winter' method.
+        The trend type the data presents, one of:
+        "add", "mul", "additive", "multiplicative", None.
+        Default to None.
+        """
 
-    smoothed_time_series = exp_smooth.fittedvalues
+        assert method in ('avg', 'exp', 'holt_winter'), \
+            f"The {method} smoothing method is not currently supported. Please " \
+            f"use one of the following: 'avg', 'exp', 'holt_winter'."
 
-    return smoothed_time_series
+        self.method = method
+        self.length = length
+        self.alpha = alpha
+        self.optimize = optimize
+        self.trend = trend
 
+    def _running_window_smoothing(self, time_series: np.ndarray) -> np.ndarray:
+        """
+        Utility method which takes in a NumPy array representing a time-series,
+        and output the a smoothed time series, by using a running-window averaging with
+        a window length 'length'.
 
-def holt_winters_smoothing(time_series: np.ndarray, trend: str = None) -> np.ndarray:
-    """
-    This method takes in a NumPy array representing a time-series, and output the
-    exponentially smoothed time series, of the same shape,
-    based on the HoltWinters method.
+        :param time_series: (NumPy array) The time-series to smooth
 
-    :param time_series: (NumPy array) The time-series to smooth
-    :param trend: (str) The trend type the data presents, one of:
-    "add", "mul", "additive", "multiplicative", None. Default to None.
+        :return: (NumPy array) The smoothed time-series
+        """
 
-    :return: (NumPy array) The smoothed time-series
-    """
+        # Define the averaging window
+        window = (1 / self.length) * np.ones((self.length,))
+        smoothed_time_series = convolve(time_series, window, mode='same', method='auto')
 
-    exp_smooth = ExponentialSmoothing(time_series, damped=False, trend=trend).fit()
-    smoothed_time_series = exp_smooth.fittedvalues
+        return smoothed_time_series
 
-    return smoothed_time_series
+    def _exponential_smoothing(self, time_series: np.ndarray) -> np.ndarray:
+        """
+        Utility method which takes in a NumPy array representing a time-series,
+        and output the exponentially smoothed time series.
 
+        :param time_series: (NumPy array) The time-series to smooth
+
+        :return: (NumPy array) The smoothed time-series
+        """
+
+        if self.optimize:
+            exp_smooth = SimpleExpSmoothing(time_series).fit(optimized=True)
+
+        else:
+            exp_smooth = SimpleExpSmoothing(time_series).fit(smoothing_level=self.alpha,
+                                                             optimized=False)
+
+        smoothed_time_series = exp_smooth.fittedvalues
+
+        return smoothed_time_series
+
+    def _holt_winters_smoothing(self, time_series: np.ndarray) -> np.ndarray:
+        """
+        Utility method which takes in a NumPy array representing a time-series,
+        and output the Holt-Winter smoothed time series.
+
+        :param time_series: (NumPy array) The time-series to smooth
+
+        :return: (NumPy array) The smoothed time-series
+        """
+
+        exp_smooth = ExponentialSmoothing(time_series, damped=False,
+                                          trend=self.trend).fit()
+        smoothed_time_series = exp_smooth.fittedvalues
+
+        return smoothed_time_series
+
+    def smooth(self, time_series: np.ndarray) -> np.ndarray:
+        """
+        Wrapper method around the various smoothing methods implemented in the Smoother
+        class. Takes in a NumPy array representing a time-series to smooth, and returns
+        the smoothed series based on the specified parameters in the constructor.
+
+        :param time_series: (NumPy array) The time-series to smooth
+
+        :return: (NumPy array) The smoothed time-series
+        """
+
+        if self.method == 'avg':
+            smoothed = self._running_window_smoothing(time_series=time_series)
+
+        elif self.method == 'exp':
+            smoothed = self._exponential_smoothing(time_series=time_series)
+
+        elif self.method == 'holt_winter':
+            smoothed = self._holt_winters_smoothing(time_series=time_series)
+
+        return smoothed
+
+    def __call__(self, time_series: np.ndarray) -> np.ndarray:
+        """
+        Implementation of the 'Call' functionality of Smoother, which calls the 'smooth'
+        method.
+
+        :param time_series: (NumPy array) The time-series to smooth
+
+        :return: (NumPy array) The smoothed time-series
+        """
+
+        return self.smooth(time_series=time_series)
 
 

@@ -2,6 +2,10 @@ from src import PROJECT_ROOT
 
 import os
 import pytest
+import numpy as np
+
+
+np.random.seed(42)
 
 
 @pytest.fixture
@@ -46,10 +50,12 @@ def get_multple_quotes_params():
 
 @pytest.fixture
 def get_exp_smooth_params():
+    method = 'exp'
     alpha = 0.6
     optimize = False
 
     params = {
+        'method': method,
         'alpha': alpha,
         'optimize': optimize,
     }
@@ -59,12 +65,25 @@ def get_exp_smooth_params():
 
 @pytest.fixture
 def get_holt_winters_smoothing_params():
+    method = 'holt_winter'
     trend = 'additive'
 
     params = {
+        'method': method,
         'trend': trend,
     }
 
     return params
 
 
+@pytest.fixture
+def get_running_window_smoothing_params():
+    method = 'avg'
+    length = 10
+
+    params = {
+        'method': method,
+        'length': length,
+    }
+
+    return params

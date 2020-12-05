@@ -1,8 +1,5 @@
 from src.io.data_queries import get_asset_data
-from src.analysis.statistical_analysis import (
-    exponential_smoothing,
-    holt_winters_smoothing
-)
+from src.analysis.statistical_analysis import Smoother
 
 import numpy as np
 
@@ -12,9 +9,8 @@ class TestAnalysis:
         quotes, macros = get_asset_data(**get_quote_params)
 
         time_series = quotes['Close']
-        get_exp_smooth_params['time_series'] = time_series
-
-        smoothed = exponential_smoothing(**get_exp_smooth_params)
+        smoother = Smoother(**get_exp_smooth_params)
+        smoothed = smoother(time_series)
 
         # Test shapes
         assert smoothed.shape == time_series.shape
@@ -33,9 +29,8 @@ class TestAnalysis:
         quotes, macros = get_asset_data(**get_quote_params)
 
         time_series = quotes['Close']
-        get_holt_winters_smoothing_params['time_series'] = time_series
-
-        smoothed = holt_winters_smoothing(**get_holt_winters_smoothing_params)
+        smoother = Smoother(**get_holt_winters_smoothing_params)
+        smoothed = smoother(time_series)
 
         # Test shapes
         assert smoothed.shape == time_series.shape
@@ -47,6 +42,24 @@ class TestAnalysis:
 
         assert np.mean(diff_ts) >= np.mean(diff_sm)
         assert np.max(diff_ts) >= np.max(diff_sm)
+
+    def test_running_window_smoothing(self, get_quote_params,
+                                      get_running_window_smoothing_params):
+        quotes, macros = get_asset_data(**get_quote_params)
+
+        time_series = quotes['Close']
+        smoother = Smoother(**get_running_window_smoothing_params)
+        smoothed = smoother(time_series)
+
+        # Test shapes
+        assert smoothed.shape == time_series.shape
+
+        # The smoothed series should have a strictly lower daily change then the
+        # original series.
+        diff_ts = np.abs(np.diff(time_series))
+        diff_sm = np.abs(np.diff(smoothed))
+
+        assert np.mean(diff_ts) > np.mean(diff_sm)
 
 
 

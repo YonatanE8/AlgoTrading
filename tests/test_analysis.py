@@ -69,27 +69,96 @@ class TestForecaster:
         smoother = Smoother(method='exp', optimize=True)
 
         # Fit the smoother
-        smoothed = smoother(y[-forecast_horizon:])
+        _ = smoother(y[:-forecast_horizon])
 
         # Instantiate a Forecaster
         forecaster = Forecaster(method='smoother', forecast_horizon=forecast_horizon,
                                 smoother=smoother)
 
         # Generate forecast
-        forecast = forecaster.forecast(y[-forecast_horizon:])
+        forecast = forecaster.forecast(y[:-forecast_horizon])
 
         # Check size
         assert len(forecast) == forecast_horizon
 
         # Forecast should be accurate roughly up to the scale of the i.i.d noise
-
+        diff = np.mean(np.abs(forecast - x[-forecast_horizon:]))
+        assert diff == pytest.approx(0, abs=1e-2)
 
     def test_forecast_holt_winters(self, get_forecasting_data):
-        pass
+        forecast_horizon = 5
+        x, y = get_forecasting_data
 
-    def test_forecast_poly(self, get_forecasting_data):
-        pass
+        # Instantiate a Smoother
+        smoother = Smoother(method='holt_winter', trend=None)
 
-    def test_arima_forecast(self, get_forecasting_data):
-        pass
+        # Fit the smoother
+        _ = smoother(y[:-forecast_horizon])
 
+        # Instantiate a Forecaster
+        forecaster = Forecaster(method='smoother', forecast_horizon=forecast_horizon,
+                                smoother=smoother)
+
+        # Generate forecast
+        forecast = forecaster.forecast(y[:-forecast_horizon])
+
+        # Check size
+        assert len(forecast) == forecast_horizon
+
+        # Forecast should be accurate roughly up to the scale of the i.i.d noise
+        diff = np.mean(np.abs(forecast - x[-forecast_horizon:]))
+        assert diff == pytest.approx(0, abs=1e-2)
+
+    def test_forecast_poly(self, get_forecasting_data_poly_deg2):
+        forecast_horizon = 5
+        x, y = get_forecasting_data_poly_deg2
+
+        # Instantiate a Smoother
+        smoother = Smoother(method='polyfit', poly_degree=2)
+
+        # Instantiate a Forecaster
+        forecaster = Forecaster(method='smoother', forecast_horizon=forecast_horizon,
+                                smoother=smoother)
+
+        # Generate forecast
+        forecast = forecaster.forecast(y[:-forecast_horizon])
+
+        # Check size
+        assert len(forecast) == forecast_horizon
+
+        # Forecast should be accurate roughly up to the scale of the i.i.d noise
+        diff = np.mean(np.abs(forecast - x[-forecast_horizon:]))
+        assert diff == pytest.approx(0, abs=3 * 1e-1)
+
+    def test_arima_forecast(self, get_forecasting_data_arima):
+        forecast_horizon = 5
+        x, y = get_forecasting_data_arima
+        fit_set = y[:-forecast_horizon]
+        # Instantiate a Forecaster
+        forecaster = Forecaster(method='arima', forecast_horizon=forecast_horizon,
+                                arima_orders=(2, 1, 2))
+
+        # Generate forecasts
+        prediction_start_fit_set = 1
+        prediction_end_fit_set = len(fit_set) - 1
+        gt_forecast = forecaster.forecast(y[:-forecast_horizon],
+                                          prediction_start=prediction_start_fit_set,
+                                          prediction_end=prediction_end_fit_set)
+
+        prediction_start_pred_set = len(fit_set)
+        prediction_end_pred_set = len(fit_set) + forecast_horizon - 1
+        pred_forecast = forecaster.forecast(y[:-forecast_horizon],
+                                            prediction_start=prediction_start_pred_set,
+                                            prediction_end=prediction_end_pred_set)
+
+        # Check size
+        assert len(gt_forecast) == len(fit_set) - 1
+        assert len(pred_forecast) == forecast_horizon
+
+        # Forecast should fit the training set up to the i.i.d noise scale
+        diff = np.mean(np.abs(gt_forecast - fit_set[1:]))
+        assert diff == pytest.approx(0, abs=1e-2)
+
+        # Forecast should fit the test set up to the i.i.d noise scale
+        diff = np.mean(np.abs(pred_forecast - x[-forecast_horizon:]))
+        assert diff == pytest.approx(0, abs=1e-2)

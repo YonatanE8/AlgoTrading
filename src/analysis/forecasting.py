@@ -12,7 +12,8 @@ class Forecaster(ABC):
 
     def __init__(self, method: str = 'smoother', forecast_horizon: int = 5,
                  smoother: Smoother = None,
-                 arima_orders: (int, int, int) = (10, 3, 10)):
+                 arima_orders: (int, int, int) = (10, 3, 10),
+                 arima_prediction_type: str = 'levels'):
         """
         Initialize a Forecaster class for producing future predictions of a time-series.
 
@@ -28,6 +29,12 @@ class Forecaster(ABC):
         The orders for the ARIMA model. Should be specified as (p, d, q) where
         'p' is the auto-regressive model order, 'd' is the integrative model order,
         and 'q' is the moving-average model order. Default is (10, 3, 10).
+        :param arima_prediction_type: (str) Used with the 'arima' method. Determines
+        the methodology of producing predictions from the ARIMA model. Can be either
+        ‘linear’ : Linear prediction in terms of the differenced endogenous variables.
+        ‘levels’ : Predict the levels of the original endogenous variables.
+        Default is 'levels'. For further details please refer to:
+        https://www.statsmodels.org -> statsmodels.tsa.arima_model.ARIMAResults.predict
         """
 
         # Check inputs
@@ -43,6 +50,7 @@ class Forecaster(ABC):
         self.forecast_horizon = forecast_horizon
         self.smoother = smoother
         self.arima_orders = arima_orders
+        self.arima_prediction_type = arima_prediction_type
 
         # Setup
         self.arima_model = None
@@ -103,12 +111,17 @@ class Forecaster(ABC):
 
         return forecast
 
-    def _arima_forecast(self, time_series: np.ndarray) -> np.ndarray:
+    def _arima_forecast(self, time_series: np.ndarray, prediction_start: int,
+                        prediction_end: int) -> np.ndarray:
         """
         Utility method, fits & uses an ARIMA model based on the parameters given
         at construction for producing future returns.
 
         :param time_series: (NumPy array) The time-series on which to compute forecasts
+        :param prediction_start: (int) Index from which to start predictions,
+        in relation to the total array used for fitting.
+        :param prediction_end: (int) Index by which to end predictions,
+        in relation to the total array used for fitting.
 
         :return: (NumPy array) The future forecast
         """
@@ -116,17 +129,25 @@ class Forecaster(ABC):
         if self.arima_model is None:
             self.arima_model = ARIMA(time_series, order=self.arima_orders).fit()
 
-        forecast = self.arima_model.forecast(self.forecast_horizon)
+        forecast = self.arima_model.predict(start=prediction_start, end=prediction_end,
+                                            typ=self.arima_prediction_type)
 
         return forecast
 
-    def forecast(self, time_series: np.ndarray) -> np.ndarray:
+    def forecast(self, time_series: np.ndarray, prediction_start: int = None,
+                 prediction_end: int = None) -> np.ndarray:
         """
         Wrapper method around the various forecasting methods implemented in the
         Forecaster class. Takes in a NumPy array representing a time-series for which
         forecasts are required, and returns the forecast.
 
         :param time_series: (NumPy array) The time-series on which to compute forecasts
+        :param prediction_start: (int) Used only with ARIMA predictions.
+        Index from which to start predictions, in relation to the total array
+        used for fitting. Defaults is None.
+        :param prediction_end: (int) Used only with ARIMA predictions.
+        Index by which to end predictions, in relation to the total array
+        used for fitting. Defaults is None.
 
         :return: (NumPy array) The future forecast
         """
@@ -135,21 +156,31 @@ class Forecaster(ABC):
             forecast = self._smooth_forecast(time_series=time_series)
 
         elif self.method == 'arima':
-            forecast = self._arima_forecast(time_series=time_series)
+            forecast = self._arima_forecast(time_series=time_series,
+                                            prediction_start=prediction_start,
+                                            prediction_end=prediction_end)
 
         return forecast
 
-    def __call__(self, time_series: np.ndarray) -> np.ndarray:
+    def __call__(self, time_series: np.ndarray, prediction_start: int = None,
+                 prediction_end: int = None) -> np.ndarray:
         """
         Implementation of the 'Call' functionality of Forecaster,
         which calls the 'forecast' method.
 
         :param time_series: (NumPy array) The time-series on which to compute forecasts
+        :param prediction_start: (int) Used only with ARIMA predictions.
+        Index from which to start predictions, in relation to the total array
+        used for fitting. Defaults is None.
+        :param prediction_end: (int) Used only with ARIMA predictions.
+        Index by which to end predictions, in relation to the total array
+        used for fitting. Defaults is None.
 
         :return: (NumPy array) The future forecast
         """
 
-        return self.forecast(time_series=time_series)
+        return self.forecast(time_series=time_series, prediction_start=prediction_start,
+                             prediction_end=prediction_end)
 
 
 

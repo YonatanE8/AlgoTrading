@@ -132,3 +132,36 @@ def get_forecasting_data():
     y = x + noise
 
     return x, y
+
+
+@pytest.fixture
+def get_forecasting_data_poly_deg2():
+    noise_scale = 0.1
+    window_length = 100000
+    trend = np.linspace(start=-2, stop=2, num=window_length)
+    trend = (1.5 * trend) + (-2 * np.power(trend, 2))
+    offset = np.random.uniform(low=-2, high=2, size=(1, ))
+    noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+
+    x = offset + trend
+    y = x + noise
+
+    return x, y
+
+
+@pytest.fixture
+def get_forecasting_data_arima():
+    noise_scale = 0.01
+    window_length = 100
+    trend = np.linspace(start=-2, stop=2, num=window_length)
+    scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
+    offset = np.random.uniform(low=-2, high=2, size=(1, ))
+    noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+
+    x = offset + scale * trend
+    y = x + noise
+
+    return x, y
+
+
+

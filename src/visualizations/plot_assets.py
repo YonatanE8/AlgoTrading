@@ -135,7 +135,7 @@ def plot_smooth_assets_list(
                         marker=markers[(s % len(markers))], linewidth=linewidth,
                         markersize=markersize)
                 names.append(
-                    f"{assets_symbols[i]}: {meta_info['name']} - {smoother.method}"
+                    f"{assets_symbols[i]}: {meta_info['name']} - {smoother.description}"
                 )
 
         ax.set_ylabel('Price [USD]')

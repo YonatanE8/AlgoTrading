@@ -6,7 +6,7 @@ from src.visualizations.plot_assets import plot_smooth_assets_list
 import os
 
 # symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
-symbols_list = ('JPM', 'C', 'DIS', 'DAL')
+symbols_list = ('JPM', )
 start_date = "2015-12-03"
 end_date = "2020-12-03"
 quote_channels = ('Close',)
@@ -20,10 +20,10 @@ assets_data = [quotes[quote_channels[0]][:, i]
                for i in range(quotes[quote_channels[0]].shape[1])]
 dates = quotes['Dates']
 smoothers = [
-    # Smoother(method='avg', length=15),
-    # Smoother(method='exp', alpha=0.6, optimize=False),
-    # Smoother(method='exp', optimize=True),
-    # Smoother(method='holt_winter', trend=None),
+    Smoother(method='avg', length=15),
+    Smoother(method='exp', alpha=0.6, optimize=False),
+    Smoother(method='exp', optimize=True),
+    Smoother(method='holt_winter', trend=None),
     Smoother(method='polyfit', poly_degree=15),
 ]
 linewidth = 1.

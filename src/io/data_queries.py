@@ -144,24 +144,31 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     # Initialize the ticker
     ticker = yf.Ticker(symbol)
 
-    # Query macro data
-    last_dividend_date = (datetime.fromtimestamp(ticker.info['lastDividendDate'])
-                          if isinstance(ticker.info['lastDividendDate'], int) else None)
+    # Query macro data, some keys might be missing for some assets,
+    # so query only those that exists
+    info = ticker.info
+    last_dividend_date = (datetime.fromtimestamp(info['lastDividendDate'])
+                          if ('lastDividendDate' in info and
+                              isinstance(info['lastDividendDate'], int))
+                          else '-')
     macro = {
-        'name': ticker.info['shortName'],
-        'sector': ticker.info['sector'],
-        'beta': ticker.info['beta'],
-        'dividend_rate': ticker.info['dividendRate'],
-        'five_years_div_yield': ticker.info['fiveYearAvgDividendYield'],
-        'trailing_price2earnings': ticker.info['trailingPE'],
-        'trailing_price2sales': ticker.info['priceToSalesTrailing12Months'],
-        'book2value_ratio': ticker.info['priceToBook'],
-        'profit_margins': ticker.info['profitMargins'],
-        'high_52w': ticker.info['fiftyTwoWeekHigh'],
-        'low_52w': ticker.info['fiftyTwoWeekLow'],
-        'change_52w': ticker.info['52WeekChange'],
+        'name': info['shortName'] if 'shortName' in info else '-',
+        'sector': info['sector'] if 'sector' in info else '-',
+        'beta': info['beta'] if 'beta' in info else '-',
+        'dividend_rate': info['dividendRate'] if 'dividendRate' in info else '-',
+        'five_years_div_yield': (info['fiveYearAvgDividendYield']
+                                 if 'fiveYearAvgDividendYield' in info else '-'),
+        'trailing_price2earnings': info['trailingPE'] if 'trailingPE' in info else '-',
+        'trailing_price2sales': (info['priceToSalesTrailing12Months']
+                                 if 'priceToSalesTrailing12Months' in info else '-'),
+        'book2value_ratio': info['priceToBook'] if 'priceToBook' in info else '-',
+        'profit_margins': info['profitMargins'] if 'profitMargins' in info else '-',
+        'high_52w': info['fiftyTwoWeekHigh'] if 'fiftyTwoWeekHigh' in info else '-',
+        'low_52w': info['fiftyTwoWeekLow'] if 'fiftyTwoWeekLow' in info else '-',
+        'change_52w': info['52WeekChange'] if '52WeekChange' in info else '-',
         'last_dividend_date': last_dividend_date,
-        'earnings_quarterly_growth': ticker.info['earningsQuarterlyGrowth'],
+        'earnings_quarterly_growth': (info['earningsQuarterlyGrowth']
+                                      if 'shortName' in info else '-'),
     }
 
     # Query historical quote prices

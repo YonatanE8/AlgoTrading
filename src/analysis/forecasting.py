@@ -182,6 +182,23 @@ class Forecaster(ABC):
         return self.forecast(time_series=time_series, prediction_start=prediction_start,
                              prediction_end=prediction_end)
 
+    @property
+    def description(self) -> str:
+        """
+        Forecaster instance Property. Generates a string which describes to current
+        instance in terms of method and parameters used for smoothing.
+
+        :return: (str) Description for the current instance of the Smoother class
+        """
+
+        if self.method == 'smoother':
+            description = f"Smoothing based forecast: {self.smoother.description}"
+
+        if self.method == 'arima':
+            description = f"ARIMA based forecast: Orders = {self.arima_orders}"
+
+        return description
+
 
 
 

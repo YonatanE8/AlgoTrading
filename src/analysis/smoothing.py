@@ -85,6 +85,7 @@ class Smoother(ABC):
 
         if self.optimize:
             exp_smooth = SimpleExpSmoothing(time_series).fit(optimized=True)
+            self.alpha = exp_smooth.params['smoothing_level']
 
         else:
             exp_smooth = SimpleExpSmoothing(time_series).fit(smoothing_level=self.alpha,
@@ -166,5 +167,28 @@ class Smoother(ABC):
         """
 
         return self.smooth(time_series=time_series)
+
+    @property
+    def description(self) -> str:
+        """
+        Smoother instance Property. Generates a string which describes to current
+        instance in terms of method and parameters used for smoothing.
+
+        :return: (str) Description for the current instance of the Smoother class
+        """
+
+        if self.method == 'avg':
+            description = f"Average Window: Length = {self.length}"
+
+        if self.method == 'exp':
+            description = f"Exponential Smoothing: alpha = {self.alpha}"
+
+        if self.method == 'holt_winter':
+            description = f"Holt-Winter Smoothing: trend = {self.trend}"
+
+        if self.method == 'polyfit':
+            description = f"PolyFit: Order = {self.poly_degree}"
+
+        return description
 
 

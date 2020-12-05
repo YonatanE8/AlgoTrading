@@ -1,6 +1,6 @@
 from os import linesep
 from datetime import datetime
-from src.analysis.statistical_analysis import Smoother
+from src.analysis.smoothing import Smoother
 import matplotlib
 
 matplotlib.use('TkAgg')

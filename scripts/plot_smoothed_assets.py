@@ -1,12 +1,12 @@
 from src import PROJECT_ROOT
 from src.io.data_queries import get_multiple_assets
-from src.analysis.statistical_analysis import Smoother
+from src.analysis.smoothing import Smoother
 from src.visualizations.plot_assets import plot_smooth_assets_list
 
 import os
 
 # symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
-symbols_list = ('JPM', )
+symbols_list = ('JPM', 'C', 'DIS', 'DAL')
 start_date = "2015-12-03"
 end_date = "2020-12-03"
 quote_channels = ('Close',)

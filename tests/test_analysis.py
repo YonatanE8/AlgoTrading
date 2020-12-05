@@ -1,5 +1,5 @@
 from src.io.data_queries import get_asset_data
-from src.analysis.statistical_analysis import Smoother
+from src.analysis.smoothing import Smoother
 
 import pytest
 import numpy as np

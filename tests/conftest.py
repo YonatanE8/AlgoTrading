@@ -52,7 +52,7 @@ def get_multple_quotes_params():
 def get_exp_smooth_params():
     method = 'exp'
     alpha = 0.6
-    optimize = False
+    optimize = True
 
     params = {
         'method': method,
@@ -87,3 +87,34 @@ def get_running_window_smoothing_params():
     }
 
     return params
+
+
+@pytest.fixture
+def get_linear():
+    x = np.linspace(start=-1.0, stop=1.0, num=150000)
+    y = x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
+
+    return x, y
+
+
+@pytest.fixture
+def get_poly_deg2():
+    x = np.linspace(start=-1, stop=1, num=10000)
+    x = (-2 * x) + np.power(x, 2)
+    y = x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
+
+    return x, y
+
+
+@pytest.fixture
+def get_fit_polyfit_params():
+    method = 'polyfit'
+    poly_degree = 3
+
+    params = {
+        'method': method,
+        'poly_degree': poly_degree,
+    }
+
+    return params
+

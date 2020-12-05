@@ -1,6 +1,7 @@
 from abc import ABC
-from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
 from scipy.signal import convolve
+from numpy.polynomial.polynomial import Polynomial
+from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
 
 import numpy as np
 
@@ -11,7 +12,7 @@ class Smoother(ABC):
     """
 
     def __init__(self, method: str = 'avg', length: int = 5, alpha: float = 0.6,
-                 optimize: bool = False, trend: str = None):
+                 optimize: bool = False, trend: str = None, poly_degree: int = 2):
         """
         Constructor for the Smoother class, determines the smoothing method and its
         parameters
@@ -31,23 +32,30 @@ class Smoother(ABC):
         The trend type the data presents, one of:
         "add", "mul", "additive", "multiplicative", None.
         Default to None.
+        :param poly_degree: (str) Used with the '_fit_polyfit' method.
+        The degree of the fitted polynomial. Default is 2.
         """
 
-        assert method in ('avg', 'exp', 'holt_winter'), \
+        # Check inputs
+        assert method in ('avg', 'exp', 'holt_winter', 'polyfit'), \
             f"The {method} smoothing method is not currently supported. Please " \
             f"use one of the following: 'avg', 'exp', 'holt_winter'."
 
+        # Set parameters
         self.method = method
         self.length = length
         self.alpha = alpha
         self.optimize = optimize
         self.trend = trend
+        self.poly_degree = poly_degree
 
     def _running_window_smoothing(self, time_series: np.ndarray) -> np.ndarray:
         """
         Utility method which takes in a NumPy array representing a time-series,
         and output the a smoothed time series, by using a running-window averaging with
-        a window length 'length'.
+        a window length 'length'. Note that this method returns only the 'same'
+        segment of the convolution, hence the outputted signal size will be identical
+        to the inputted one.
 
         :param time_series: (NumPy array) The time-series to smooth
 
@@ -56,7 +64,8 @@ class Smoother(ABC):
 
         # Define the averaging window
         window = (1 / self.length) * np.ones((self.length,))
-        smoothed_time_series = convolve(time_series, window, mode='same', method='auto')
+        smoothed_time_series = convolve(time_series, window, mode='same',
+                                        method='auto')
 
         return smoothed_time_series
 
@@ -97,6 +106,24 @@ class Smoother(ABC):
 
         return smoothed_time_series
 
+    def _fit_polyfit(self, time_series: np.ndarray) -> np.ndarray:
+        """
+        Utility method which takes in a NumPy array representing a time-series,
+        fit a polynomial of order 'poly_degree' given at construction,
+        and returns the polynomial over the same x-axis range.
+
+        :param time_series: (NumPy array) The time-series to smooth
+
+        :return: (NumPy array) The smoothed time-series
+        """
+
+        x = np.arange(len(time_series))
+        poly = Polynomial.fit(x, time_series, deg=self.poly_degree)
+
+        fitted_time_series = poly(x)
+
+        return fitted_time_series
+
     def smooth(self, time_series: np.ndarray) -> np.ndarray:
         """
         Wrapper method around the various smoothing methods implemented in the Smoother
@@ -116,6 +143,9 @@ class Smoother(ABC):
 
         elif self.method == 'holt_winter':
             smoothed = self._holt_winters_smoothing(time_series=time_series)
+
+        elif self.method == 'polyfit':
+            smoothed = self._fit_polyfit(time_series=time_series)
 
         return smoothed
 

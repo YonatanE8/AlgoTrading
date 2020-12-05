@@ -80,7 +80,7 @@ def plot_smooth_assets_list(
         assets_symbols: tuple, assets_data: list, dates: list, assets_meta_data: list,
         smoothers: (Smoother, ...), save_plot_path: str = None,
         save_report_path: str = None, linewidth: float = 1.0,
-        markersize: float = 1.0) -> None:
+        markersize: float = 1.0, alpha: float = 1.0) -> None:
     """
     A method for plotting a list of tradable equities after smoothening.
 
@@ -99,6 +99,7 @@ def plot_smooth_assets_list(
     per-asset report, doesn't save if None, default is None.
     :param linewidth: (float) Width of the plotted line, default is 1.0.
     :param markersize: (float) Size of the plotted markers, default is 1.0.
+    :param alpha: (float) Shade intensity for the raw data plot, default is 1.0.
 
     :return: None
     """
@@ -123,8 +124,7 @@ def plot_smooth_assets_list(
             infos.append(info)
 
             # Plot the un-smoothed data
-            ax.plot(dates[-len(asset):], asset, c=colors[i], linestyle='-',
-                    linewidth=linewidth, markersize=markersize)
+            ax.plot(dates[-len(asset):], asset, c=colors[i], linestyle='-', alpha=alpha)
             names.append(f"{assets_symbols[i]}: {meta_info['name']}")
 
             # Plot all smoothers

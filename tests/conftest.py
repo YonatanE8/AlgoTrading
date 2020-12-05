@@ -43,3 +43,28 @@ def get_multple_quotes_params():
 
     return params
 
+
+@pytest.fixture
+def get_exp_smooth_params():
+    alpha = 0.6
+    optimize = False
+
+    params = {
+        'alpha': alpha,
+        'optimize': optimize,
+    }
+
+    return params
+
+
+@pytest.fixture
+def get_holt_winters_smoothing_params():
+    trend = None
+
+    params = {
+        'trend': trend,
+    }
+
+    return params
+
+

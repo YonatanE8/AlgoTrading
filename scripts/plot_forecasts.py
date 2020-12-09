@@ -24,7 +24,9 @@ smoother = Smoother(method='polyfit', poly_degree=4)
 # Define Forecaster
 # method = 'arima'
 method = 'smoother'
-forecast_horizon = 15
+forecast_horizon = 66
+period_length = 222
+
 arima_orders = (5, 2, 1)
 arima_prediction_type = 'levels'
 forecaster = Forecaster(method=method, forecast_horizon=forecast_horizon,
@@ -47,7 +49,6 @@ if __name__ == '__main__':
                                         adjust_prices=adjust_prices,
                                         cache_path=cache_path)
         assets_data = quotes[quote_channels[0]]
-        period_length = 66
         n_periods = len(assets_data) // period_length
         periods = [assets_data[i * period_length:((i + 1) * period_length)]
                    for i in range(n_periods)]

@@ -24,7 +24,7 @@ class TestDataQueries:
             assert len(sym) <= 6  # No more then six characters per symbol
 
             assert isinstance(names[i], str)
-            assert os.sep not in names[i]
+            assert os.sep != names[i][-1]
             assert names[i][-1] != ' '
 
     def test_get_sp500_symbols_wiki(self):

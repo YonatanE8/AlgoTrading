@@ -6,7 +6,7 @@ from src.visualizations.plot_assets import plot_smooth_assets_list
 import os
 
 # symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
-symbols_list = ('JPM', )
+symbols_list = ('MSFT', )
 start_date = "2015-12-03"
 end_date = "2020-12-03"
 quote_channels = ('Close',)

@@ -68,7 +68,8 @@ class Forecaster(ABC):
         if self.smoother.exp_smoother is None:
             self.smoother(time_series=time_series)
 
-        forecast = self.smoother.exp_smoother.forecast(self.forecast_horizon)
+        forecast = self.smoother.exp_smoother.predict(
+            start=len(time_series), end=(len(time_series) + self.forecast_horizon))
 
         return forecast
 
@@ -128,6 +129,10 @@ class Forecaster(ABC):
 
         if self.arima_model is None:
             self.arima_model = ARIMA(time_series, order=self.arima_orders).fit()
+
+        if prediction_start is None or prediction_end is None:
+            prediction_start = len(time_series)
+            prediction_end = len(time_series) + self.forecast_horizon
 
         forecast = self.arima_model.predict(start=prediction_start, end=prediction_end,
                                             typ=self.arima_prediction_type)

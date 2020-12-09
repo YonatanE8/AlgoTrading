@@ -26,9 +26,9 @@ smoothers = [
     Smoother(method='holt_winter', trend=None),
     Smoother(method='polyfit', poly_degree=15),
 ]
-linewidth = 1.
+linewidth = 1.5
 markersize = 2.5
-alpha = 0.4
+alpha = 0.75
 plot_smooth_assets_list(assets_symbols=symbols_list, assets_data=assets_data,
                         smoothers=smoothers, dates=dates, assets_meta_data=macros,
                         linewidth=linewidth, markersize=markersize, alpha=alpha)

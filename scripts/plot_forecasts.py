@@ -29,12 +29,16 @@ periods = [assets_data[i * period_length:((i + 1) * period_length)]
 dates = quotes['Dates']
 
 # Define Smoother
-smoother = Smoother(method='polyfit', poly_degree=15)
+# smoother = Smoother(method='avg', length=15)
+# smoother = Smoother(method='exp', alpha=0.6, optimize=False)
+smoother = Smoother(method='exp', optimize=True)
+# smoother = Smoother(method='holt_winter', trend=None)
+# smoother = Smoother(method='polyfit', poly_degree=7)
 
 # Define Forecaster
-method = 'smoother'
+method = 'arima'
 forecast_horizon = 15
-arima_orders = (10, 3, 10)
+arima_orders = (5, 2, 1)
 arima_prediction_type = 'levels'
 forecaster = Forecaster(method=method, forecast_horizon=forecast_horizon,
                         smoother=smoother, arima_orders=arima_orders,

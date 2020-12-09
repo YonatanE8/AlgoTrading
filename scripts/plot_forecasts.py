@@ -8,7 +8,7 @@ import os
 
 # Define data parameters
 # symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
-symbol = 'MSFT'
+symbol = 'JPM'
 start_date = "2015-12-03"
 end_date = "2020-12-03"
 quote_channels = ('Close',)
@@ -31,12 +31,13 @@ dates = quotes['Dates']
 # Define Smoother
 # smoother = Smoother(method='avg', length=15)
 # smoother = Smoother(method='exp', alpha=0.6, optimize=False)
-smoother = Smoother(method='exp', optimize=True)
+# smoother = Smoother(method='exp', optimize=True)
 # smoother = Smoother(method='holt_winter', trend=None)
-# smoother = Smoother(method='polyfit', poly_degree=7)
+smoother = Smoother(method='polyfit', poly_degree=7)
 
 # Define Forecaster
-method = 'arima'
+# method = 'arima'
+method = 'smoother'
 forecast_horizon = 15
 arima_orders = (5, 2, 1)
 arima_prediction_type = 'levels'

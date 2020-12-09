@@ -1,5 +1,5 @@
 from os import linesep
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.analysis.smoothing import Smoother
 from src.analysis.forecasting import Forecaster
 import matplotlib
@@ -167,7 +167,7 @@ def plot_smooth_assets_list(
 
 
 def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
-                   forecaster: Forecaster, assets_symbol: str,
+                   forecaster: Forecaster, asset_symbol: str,
                    dates: list, asset_meta_data: dict,
                    save_plot_path: str = None,
                    save_report_path: str = None, linewidth: float = 1.0,
@@ -180,7 +180,7 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
     :param smoother: (Smoother) A smoother object to use on each period
     :param forecaster: (Forecaster) A forecaster object to calculate the forecast over
     the period
-    :param assets_symbol: (str) A string denoting the symbol
+    :param asset_symbol: (str) A string denoting the symbol
     of the asset to be plotted
     :param dates: (list) A list of strings, denoting the dates for which
     the quotes are given
@@ -197,7 +197,6 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
     :return: None
     """
 
-    smoothed_list = []
     forecasts = []
     for i, period in enumerate(periods[1:]):
         period = np.concatenate(periods[:i + 1])
@@ -205,10 +204,7 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
 
         forecaster.smoother = smoother
         forecaster.arima_model = None
-
         forecast = forecaster(smoothed)
-
-        smoothed_list.append(smoothed)
         forecasts.append(forecast)
 
     names = []
@@ -224,13 +220,27 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
                 f'{linesep}{"*" * 30}{linesep}')
         print(info)
 
+        # Plot the raw data
+        raw = np.concatenate(periods, 0)
+        ax.plot(dates[:len(raw)], raw, linestyle='-', alpha=alpha, c='b')
+        names.append(f"{asset_symbol}: {asset_meta_data['name']}")
+
         # Plot the smoothed data
-        ax.plot(dates[-len(smoothed[-1]):], smoothed[-1], linestyle='-', alpha=alpha)
-        names.append(f"{assets_symbol}: {asset_meta_data['name']}")
+        ax.plot(dates[:len(smoothed)], smoothed, linestyle='-', alpha=alpha, c='r')
+        names.append(f"{asset_symbol}: Smoothed")
+
+        # Add the dates for the final forecast period
+        new_dates = [(dates[-1] + timedelta(days=1)), ]
+        for f in range((len(forecasts[-1]) - 1)):
+            new_dates.append((new_dates[-1] + timedelta(days=1)))
+
+        dates.extend(new_dates)
 
         # Plot all forecasts
         for f, forecast in enumerate(forecasts):
-            ax.plot(dates[-len(forecast):], forecast,
+            ax.plot(dates[((f + 1) * len(periods[0])):((f + 1) * len(periods[0]) +
+                                                       len(forecast))],
+                    forecast,
                     linestyle=linestyles[(f % len(linestyles))],
                     marker=markers[(f % len(markers))], linewidth=linewidth,
                     markersize=markersize)
@@ -243,6 +253,7 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
         ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
         fig.autofmt_xdate()
         plt.legend(names)
+        plt.ylim(((np.min(raw)), np.max(raw)))
 
         if save_plot_path is not None:
             if not save_plot_path.endswith('.pdf'):
@@ -259,6 +270,6 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
             end_date = dates[-1]
             with open(save_report_path, 'w') as report_file:
                 report_file.write(f"Asset report from {start_date} - {end_date}\n\n")
-                [report_file.write(info) for info in infos]
+                report_file.write(info)
 
         plt.show()

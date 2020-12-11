@@ -3,8 +3,6 @@ from typing import List
 from src.io.data_queries import get_multiple_assets
 from src.analysis.smoothing import Smoother
 
-import numpy as np
-
 
 class Scanner(ABC):
     """
@@ -133,8 +131,8 @@ class Scanner(ABC):
 
         self.macro_criterions.update(criterions)
 
-    def _test_criterion(self, asset_macro: dict, current_price: float = None,
-                        ignore_none: bool = False) -> {bool, None}:
+    def _test_macro_criterion(self, asset_macro: dict, current_price: float = None,
+                              ignore_none: bool = False) -> {bool, None}:
         """
         A utility method for testing whether a specific asset upholds the macro
         requirements specified in self.macro_criterions.
@@ -201,6 +199,17 @@ class Scanner(ABC):
         """
 
         self.quote_criterions.update(criterions)
+
+    def _test_quote_criterion(self) -> bool:
+        """
+        A utility method for testing whether a specific asset upholds the requirements
+        over the analyzed quote time-series specified in self.quote_criterions.
+
+        :return: (bool/None) True/False, indicating whether the asset upholds all
+        required criterions. Returns True if yes, False if not.
+        """
+
+        raise NotImplemented
 
     def scan_for_potential_assets(self, ) -> List[str]:
         """

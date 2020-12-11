@@ -13,7 +13,7 @@ class Analyzer(ABC):
     def __init__(self, symbols_list: tuple, start_date: str, end_date: str = None,
                  quote_channel: str = 'Close', adjust_prices: bool = True,
                  risk_free_asset_symbol: str = '^IRX', bins: int = 10,
-                 spectral_energy_threshold: float = 0.2,
+                 spectral_energy_threshold: float = 0.2, trend_period_length: int = 22,
                  cache_path: str = None):
         """
         Constructor method for the Analyzer class
@@ -33,8 +33,11 @@ class Analyzer(ABC):
         asset (for example for Sharpe-Ratio computation). Defaults to '^IRX',
         which refers to the yield of US treasury bonds for 13 weeks.
         :param bins: (int) Number of bins to use in the histogram analysis computation.
+        Defaults to 10.
         :param spectral_energy_threshold: (float) threshold between 0 and 1 to use
         when performing the periodicty analysis. Defaults to 0.2.
+        :param trend_period_length: (int) Period length (in trading days) to consider
+        when performing trend analysis. Defaults to 22 (i.e. 1 trading month).
         :param cache_path: (str) Path to the directory in which to cache / look for
         cached data, if None does not use caching. Default is None.
         """
@@ -49,11 +52,12 @@ class Analyzer(ABC):
         self.risk_free_asset_symbol = risk_free_asset_symbol
         self.bins = bins
         self.spectral_energy_threshold = spectral_energy_threshold
+        self.trend_period_length = trend_period_length
 
         # Query assets
         quotes = get_multiple_assets(symbols_list=symbols_list, start_date=start_date,
                                      end_date=end_date,
-                                     quote_channels=(quote_channel, ),
+                                     quote_channels=(quote_channel,),
                                      adjust_prices=adjust_prices,
                                      cache_path=cache_path)
         self.quotes = quotes[quote_channel]
@@ -62,7 +66,7 @@ class Analyzer(ABC):
         # Query the risk free asset
         risk_free_asset = get_asset_data(symbol=risk_free_asset_symbol,
                                          start_date=start_date, end_date=end_date,
-                                         quote_channels=(quote_channel, ),
+                                         quote_channels=(quote_channel,),
                                          adjust_prices=adjust_prices,
                                          cache_path=cache_path)
         self.risk_free_asset = risk_free_asset[quote_channel]
@@ -80,7 +84,7 @@ class Analyzer(ABC):
         :return: (np.ndarray) Returns of all assets
         """
 
-        returns = np.diff(quotes, axis=0)
+        returns = np.diff(quotes, axis=0) / quotes[:-1]
 
         return returns
 
@@ -117,7 +121,7 @@ class Analyzer(ABC):
 
         return self._analyze_sr()
 
-    def _returns_histogram(self) -> (np.ndarray, np.ndarray):
+    def _analyze_returns_histogram(self) -> (np.ndarray, np.ndarray):
         """
         A utility method for computing the histogram of returns.
 
@@ -166,6 +170,7 @@ class Analyzer(ABC):
         :return: (np.ndarray) The final periodic signal
         """
 
+        # Compute power spectrum and get spectral components
         frequencies, power_spectrum = welch(quotes, fs=1.0, window='hann',
                                             return_onesided=True, scaling='density',
                                             axis=0)
@@ -188,7 +193,53 @@ class Analyzer(ABC):
             for i, component in enumerate(spectral_components) if len(component)
         ]
 
-        pass
+        # Copmute periodic signal for each component
+        x_axis = np.arange(len(quotes.shape[0]))
+        periodic_signal = [
+            (np.sum(
+                np.concatenate(
+                    [np.expand_dims((
+                            spectral_components_energies[c] *
+                            np.sin(2 * np.pi * freq * x_axis)),
+                        1)
+                        for freq in component],
+                    1),
+                axis=1) / len(component)) if len(component) else np.zeros_like(x_axis)
+            for c, component in enumerate(spectral_components_freqs)
+        ]
+
+        # Concatenate all signals
+        periodic_signal = np.concatenate([np.expand_dims(sig, 1)
+                                          for sig in periodic_signal], 1)
+
+        # Add the running average window
+        sums = np.cumsum(quotes, axis=0)
+        sums = [np.expand_dims(sums[i, :], 0) / (i + 1) for i in range(quotes.shape[0])]
+        sums = np.concatenate(sums, 0)
+
+        final_signal = periodic_signal + sums
+
+        return final_signal
+
+    def _returns_emerging_trend(self, quotes: np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+        A utility method for detecting trends in assets' quotes over a recent, short
+        time periods.
+
+        :param quotes: (np.ndarray) The assets to analyze
+
+        :return: (np.ndarray, np.ndarray) A tuple of two np.ndarray, the first contains
+        the mean trends of each asset' returns over the most recent
+        'trend_period_length' trading days, and the second element contains the return's
+        standard deviation over the same period
+        """
+
+        period = quotes[-self.trend_period_length:, :]
+        returns = self._compute_returns(period)
+        trend_mean = np.mean(returns, axis=0)
+        trend_std = np.std(returns, axis=0)
+
+        return trend_mean, trend_std
 
 
 

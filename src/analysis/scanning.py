@@ -8,7 +8,7 @@ import numpy as np
 
 class Scanner(ABC):
     """
-    Class for performing analysis over a large number of assets, using pre-determined
+    Class for performing scans over a large number of assets, using pre-determined
     macro_criterions in order to automatically detect promising assets for investment.
     """
 
@@ -193,16 +193,9 @@ class Scanner(ABC):
 
         For example, one can specify the following criterions.
         Viable criterions are:
-
-        'sector': ('Health Care', 'Financials', 'Communication Services'),
-        'beta': (minVal, maxVal),
-        'dividend_rate': (minVal, maxVal),
-        'trailing_price2earnings': (minVal, maxVal),
-        'high_52w': (minVal in % (relative to current price)),
-                     maxVal in % (relative to current price)),
-        'low_52w': (minVal in % (relative to current price),
-                     maxVal in % (relative to current price)),
-        'earningsQuarterlyGrowth': (minVal in %, maxVal in % ),
+        'avg_slope': (minVal, maxVal),
+        'median_slope': (minVal, maxVal),
+        'median_trend': (minVal, maxVal),
 
         :return: None
         """
@@ -210,9 +203,9 @@ class Scanner(ABC):
         self.quote_criterions.update(criterions)
 
     def scan_for_potential_assets(self, ) -> List[str]:
-            """
+        """
 
-            :return:
-            """
+        :return:
+        """
 
-            raise NotImplemented
+        raise NotImplemented

@@ -148,28 +148,27 @@ def _load_asset_data(symbol: str, start_date: str, end_date: str = None,
     # Query macro data, some keys might be missing for some assets,
     # so query only those that exists
     info = ticker.info
-    last_dividend_date = (datetime.fromtimestamp(info['lastDividendDate'])
-                          if ('lastDividendDate' in info and
-                              isinstance(info['lastDividendDate'], int))
-                          else '-')
     macro = {
-        'name': info['shortName'] if 'shortName' in info else '-',
-        'sector': info['sector'] if 'sector' in info else '-',
-        'beta': info['beta'] if 'beta' in info else '-',
-        'dividend_rate': info['dividendRate'] if 'dividendRate' in info else '-',
+        'name': info['shortName'] if 'shortName' in info else None,
+        'sector': info['sector'] if 'sector' in info else None,
+        'beta': info['beta'] if 'beta' in info else None,
+        'dividend_rate': info['dividendRate'] if 'dividendRate' in info else None,
         'five_years_div_yield': (info['fiveYearAvgDividendYield']
-                                 if 'fiveYearAvgDividendYield' in info else '-'),
-        'trailing_price2earnings': info['trailingPE'] if 'trailingPE' in info else '-',
+                                 if 'fiveYearAvgDividendYield' in info else None),
+        'trailing_price2earnings': info['trailingPE'] if 'trailingPE' in info else None,
         'trailing_price2sales': (info['priceToSalesTrailing12Months']
-                                 if 'priceToSalesTrailing12Months' in info else '-'),
-        'book2value_ratio': info['priceToBook'] if 'priceToBook' in info else '-',
-        'profit_margins': info['profitMargins'] if 'profitMargins' in info else '-',
-        'high_52w': info['fiftyTwoWeekHigh'] if 'fiftyTwoWeekHigh' in info else '-',
-        'low_52w': info['fiftyTwoWeekLow'] if 'fiftyTwoWeekLow' in info else '-',
-        'change_52w': info['52WeekChange'] if '52WeekChange' in info else '-',
-        'last_dividend_date': last_dividend_date,
+                                 if 'priceToSalesTrailing12Months' in info else None),
+        'book2value_ratio': info['priceToBook'] if 'priceToBook' in info else None,
+        'profit_margins': info['profitMargins'] if 'profitMargins' in info else None,
+        'high_52w': info['fiftyTwoWeekHigh'] if 'fiftyTwoWeekHigh' in info else None,
+        'low_52w': info['fiftyTwoWeekLow'] if 'fiftyTwoWeekLow' in info else None,
+        'change_52w': info['52WeekChange'] if '52WeekChange' in info else None,
+        'last_dividend_date': (datetime.fromtimestamp(info['lastDividendDate'])
+                               if ('lastDividendDate' in info and
+                                   isinstance(info['lastDividendDate'], int))
+                               else None),
         'earnings_quarterly_growth': (info['earningsQuarterlyGrowth']
-                                      if 'shortName' in info else '-'),
+                                      if 'earningsQuarterlyGrowth' in info else None),
     }
 
     # Query historical quote prices
@@ -344,7 +343,7 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
     for which data is to be queried.
     :param start_date: (str) Starting date, should be formatted as 'year-month-day'".
     :param end_date: (str) Ending date, should be formatted as 'year-month-day'".
-    If None uses today's date. Defualts to None.
+    If None uses today's date. Defaults to None.
     :param quote_channels: (Tuple) Tuple of strings, where each element should denote a
     quote channel to query stock prices by. The available channels are:
     'Close', 'Open', 'Low', 'High', 'Volume'.

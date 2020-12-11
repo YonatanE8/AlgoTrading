@@ -1,7 +1,8 @@
 from abc import ABC
 from typing import List
-from src.io.data_queries import get_multiple_assets
 from src.analysis.smoothing import Smoother
+from src.analysis.analyzing import Analyzer
+from src.io.data_queries import get_multiple_assets
 
 
 class Scanner(ABC):
@@ -12,7 +13,8 @@ class Scanner(ABC):
 
     def __init__(self, symbols_list: (str, ...), start_date: str, end_date: str,
                  quote_channel: str, adjust_prices: bool = True,
-                 smoother: Smoother = None, cache_path: str = None):
+                 smoother: Smoother = None, analyzer: Analyzer = None,
+                 cache_path: str = None):
         """
         Constructor method for the scanner object.
 
@@ -25,8 +27,11 @@ class Scanner(ABC):
         The available channels are: 'Close', 'Open', 'Low', 'High', 'Volume'.
         :param adjust_prices: (bool) Whether to adjust the Close/Open/High/Low quotes,
         defaults to True.
-        :param smoother: (Smoother) The instantiated smoother object to be used.
+        :param smoother: (Smoother) An instantiated Smoother object to be used.
         If None, no smoothing is applied. Defaults to None.
+        :param analyzer: (Analyzer) An instantiated Analyzer object to be used for
+        quote based criterions. If None, no quote based criterions can be applied.
+         Defaults to None.
         :param cache_path: (str) Path to the directory in which to cache / look for
         cached data, if None does not use caching. Default is None.
         """
@@ -36,6 +41,7 @@ class Scanner(ABC):
         self.quote_channel = quote_channel
         self.adjust_prices = adjust_prices
         self.cache_path = cache_path
+        self._analyzer = analyzer
 
         quotes, self.macros = get_multiple_assets(symbols_list=symbols_list,
                                                   start_date=start_date,
@@ -48,6 +54,7 @@ class Scanner(ABC):
         self._smoother = smoother
 
         # Set place-holders
+        self.relevant_assets = []
         self._viable_macro_criterions = (
             'sector',
             'beta',
@@ -65,20 +72,36 @@ class Scanner(ABC):
             'earnings_quarterly_growth',
         )
         self.macro_criterions = {}
+
+        self._viable_quote_criterions = [
+            'sr', 'mean', 'recent_trend_mean', 'recent_trend_std',
+        ]
         self.quote_criterions = {}
-        self.relevant_assets = []
 
     def set_smoother(self, smoother: Smoother) -> None:
         """
         A method for setting a Smoother object, enabling the analysis to be performed
         over a smoothed signal instead of over the raw signal itself.
 
-        :param smoother: (Smoother) The instantiated smoother object to be used.
+        :param smoother: (Smoother) An instantiated smoother object to be used.
 
         :return: None
         """
 
         self._smoother = smoother
+
+    def set_analyzer(self, analyzer: Analyzer) -> None:
+        """
+        A method for setting a Smoother object, enabling the analysis to be performed
+        over a smoothed signal instead of over the raw signal itself.
+
+        :param analyzer: (Analyzer) An instantiated Analyzer object to be used for
+        quote based criterions.
+
+        :return: None
+        """
+
+        self._analyzer = analyzer
 
     @property
     def viable_macro_criterions(self) -> (str, ...):
@@ -90,6 +113,17 @@ class Scanner(ABC):
         """
 
         return self._viable_macro_criterions
+
+    @property
+    def viable_quotes_criterions(self) -> (str, ...):
+        """
+        A class property, returns the list of viable quote criterions to be considered.
+
+        :return: (tuple) A tuple containing a list of all viable quote criterions
+         to be considered.
+        """
+
+        return self._viable_quote_criterions
 
     def set_macro_criterions(self, criterions: dict) -> None:
         """
@@ -124,9 +158,9 @@ class Scanner(ABC):
         """
 
         for key in criterions:
-            assert key in self.viable_macro_criterions, \
+            assert key in self._viable_macro_criterions, \
                 f"{key} is not a valid macro criterion, " \
-                f"please refer to the viable_macro_criterions list" \
+                f"please refer to the viable_macro_criterions property" \
                 f" for all viable criterions."
 
         self.macro_criterions.update(criterions)
@@ -185,31 +219,47 @@ class Scanner(ABC):
         of an asset in order for it to be considered as eligible for investment.
 
         :param criterions: (dict) A dictionary specifying each criterion as a key-value
-        pair, where the key is the name of the relevant macro field, and the value is
-        a collection or range of acceptable values, i.e. the value for each key must
-        be an iterable object.
+        pair, where the key is the name of the relevant analysis to apply to the quotes,
+        and the value is a collection or range of acceptable values, i.e.
+        the value for each key must be an iterable object.
 
         For example, one can specify the following criterions.
         Viable criterions are:
-        'avg_slope': (minVal, maxVal),
-        'median_slope': (minVal, maxVal),
-        'median_trend': (minVal, maxVal),
+        'sr': (minVal, maxVal),
+        'mean': (minVal, maxVal),
+        'recent_trend_mean': (minVal, maxVal),
+        'recent_trend_std': (minVal, maxVal),
 
         :return: None
         """
 
+        for key in criterions:
+            assert key in self._viable_quote_criterions, \
+                f"{key} is not a valid quote criterion, " \
+                f"please refer to the viable_quote_criterions property" \
+                f" for all viable criterions."
+
         self.quote_criterions.update(criterions)
 
-    def _test_quote_criterion(self) -> bool:
+    def _test_quote_criterion(self, asset_quote_stats: dict) -> bool:
         """
-        A utility method for testing whether a specific asset upholds the requirements
-        over the analyzed quote time-series specified in self.quote_criterions.
+        A utility method for testing whether a specific asset upholds the quote
+        requirements specified in self.quote_criterions.
 
-        :return: (bool/None) True/False, indicating whether the asset upholds all
+        :param asset_quote_stats:  (dict) A dictionary containing the results of all
+        quotes based analysis for the asset in question.
+
+        :return: (bool) True/False, indicating whether the asset upholds all
         required criterions. Returns True if yes, False if not.
         """
 
-        raise NotImplemented
+        for criterion in self.quote_criterions:
+            if (asset_quote_stats[criterion] < self.quote_criterions[criterion][0] or
+                    asset_quote_stats[criterion] > self.quote_criterions[criterion][
+                        1]):
+                return False
+
+        return True
 
     def scan_for_potential_assets(self, ) -> List[str]:
         """

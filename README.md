@@ -17,6 +17,11 @@ pip install .
 
 That's it :-)
 
+## Installation Validation
+After we have installed the package, let's validate that everything works as expected.
+In the terminal, go to the project's root directory and run: `pytest`.
+Validate that all tests are passing.
+
 ## Getting Started
 The **recommended** place to start with is the **getting_started** jupyter-notebook, 
 located at the **notebooks** directory, under the project's root directory.

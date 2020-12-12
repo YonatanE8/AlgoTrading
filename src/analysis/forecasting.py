@@ -69,7 +69,7 @@ class Forecaster(ABC):
             self.smoother(time_series=time_series)
 
         forecast = self.smoother.exp_smoother.predict(
-            start=len(time_series), end=(len(time_series) + self.forecast_horizon))
+            start=len(time_series), end=(len(time_series) + self.forecast_horizon - 1))
 
         return forecast
 
@@ -86,8 +86,8 @@ class Forecaster(ABC):
         if self.smoother.poly is None:
             self.smoother(time_series=time_series)
 
-        x = np.arange((len(time_series) + 1),
-                      (len(time_series) + self.forecast_horizon + 1))
+        x = np.arange(len(time_series),
+                      (len(time_series) + self.forecast_horizon))
         forecast = self.smoother.poly(x)
 
         return forecast
@@ -132,7 +132,7 @@ class Forecaster(ABC):
 
         if prediction_start is None or prediction_end is None:
             prediction_start = len(time_series)
-            prediction_end = len(time_series) + self.forecast_horizon
+            prediction_end = len(time_series) + self.forecast_horizon - 1
 
         forecast = self.arima_model.predict(start=prediction_start, end=prediction_end,
                                             typ=self.arima_prediction_type)

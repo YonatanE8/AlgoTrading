@@ -75,6 +75,7 @@ class Scanner(ABC):
 
         self._viable_quote_criterions = [
             'sr', 'mean', 'recent_trend_mean', 'recent_trend_std',
+            'overall_period_return',
         ]
         self.quote_criterions = {}
 

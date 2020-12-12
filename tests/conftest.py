@@ -88,8 +88,9 @@ def get_running_window_smoothing_params():
 
     return params
 
+
 @pytest.fixture
-def get_fit_polyfit_params(self):
+def get_fit_polyfit_params():
     method = 'polyfit'
     poly_degree = 3
 
@@ -101,15 +102,15 @@ def get_fit_polyfit_params(self):
     return params
 
 
-class BaseForecastTestingData:
+class BasicTestingData:
     def get_linear(self):
         self.x = np.linspace(start=-1.0, stop=1.0, num=150000)
-        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
+        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(self.x, )))
 
     def get_poly_deg2(self):
         x = np.linspace(start=-1, stop=1, num=10000)
         self.x = (-2 * x) + np.power(x, 2)
-        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
+        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(self.x, )))
 
     def get_forecasting_data(self):
         noise_scale = 0.1

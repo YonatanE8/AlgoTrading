@@ -134,14 +134,13 @@ class Analyzer(ABC):
 
         return values, counts
 
-    @property
-    def mean_annual_return(self) -> float:
+    def _compute_mean_annual_return(self) -> np.ndarray:
         """
-        Class property, denoting the mean annual return of each asset, where the
+        Utility method for computing the mean annual return of each asset, where the
         mean annual return is computed as the mean return over the entire
         requested period, multiplied by 255 (trading days per year on avg.)
 
-        :return: (float) The mean annual return
+        :return: (np.ndarray) The mean annual return for each asset
         """
 
         # Get mean returns
@@ -151,6 +150,18 @@ class Analyzer(ABC):
         mean_annual_returns = 255 * mean_returns
 
         return mean_annual_returns
+
+    @property
+    def mean_annual_return(self) -> np.ndarray:
+        """
+        Class property, denoting the mean annual return of each asset, where the
+        mean annual return is computed as the mean return over the entire
+        requested period, multiplied by 255 (trading days per year on avg.)
+
+        :return: (np.ndarray) The mean annual return for each asset
+        """
+
+        return self._compute_mean_annual_return()
 
     def _analyze_periodicty(self, quotes: np.ndarray) -> np.ndarray:
         """
@@ -240,6 +251,25 @@ class Analyzer(ABC):
         trend_std = np.std(returns, axis=0)
 
         return trend_mean, trend_std
+
+    def _compute_overall_period_return(self) -> np.ndarray:
+        """
+        Utility method for computing the overall return of each asset over the most
+        recent trading period, where the length of the period if determined by
+        the 'trend_period_length' parameter given in the constructor.
+        :return:
+        """
+
+        pass
+
+    @property
+    def overall_period_return(self) -> np.ndarray:
+        """
+
+        :return:
+        """
+
+        pass
 
     def analyze(self, quotes: np.ndarray = None) -> dict:
         """

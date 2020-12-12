@@ -1,10 +1,10 @@
 from src import PROJECT_ROOT
+from src.analysis.scanning import Scanner
 from src.analysis.analyzing import Analyzer
 
 import os
 import pytest
 import numpy as np
-
 
 np.random.seed(42)
 
@@ -117,9 +117,9 @@ class BasicTestingData:
         noise_scale = 0.1
         window_length = 100000
         trend = np.linspace(start=-2, stop=2, num=window_length)
-        scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
-        offset = np.random.uniform(low=-2, high=2, size=(1, ))
-        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+        scale = np.random.uniform(low=-0.5, high=0.5, size=(1,))
+        offset = np.random.uniform(low=-2, high=2, size=(1,))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
 
         self.x = offset + scale * trend
         self.y = self.x + noise
@@ -129,8 +129,8 @@ class BasicTestingData:
         window_length = 100000
         trend = np.linspace(start=-2, stop=2, num=window_length)
         trend = (1.5 * trend) + (-2 * np.power(trend, 2))
-        offset = np.random.uniform(low=-2, high=2, size=(1, ))
-        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+        offset = np.random.uniform(low=-2, high=2, size=(1,))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
 
         self.x = offset + trend
         self.y = self.x + noise
@@ -139,9 +139,9 @@ class BasicTestingData:
         noise_scale = 0.01
         window_length = 100
         trend = np.linspace(start=-2, stop=2, num=window_length)
-        scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
-        offset = np.random.uniform(low=-2, high=2, size=(1, ))
-        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+        scale = np.random.uniform(low=-0.5, high=0.5, size=(1,))
+        offset = np.random.uniform(low=-2, high=2, size=(1,))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
 
         self.x = offset + scale * trend
         self.y = self.x + noise
@@ -172,3 +172,22 @@ def get_analyzer():
     return analyzer
 
 
+@pytest.fixture
+def get_scanner(get_analyzer):
+    symbols_list = ("MSFT", "AAPL", "JPM", "C", "DIS")
+    start_date = "2015-01-01"
+    end_date = "2016-01-01"
+    quote_channel = 'Close'
+    adjust_prices = True
+    smoother = None
+    cache_path = os.path.join(PROJECT_ROOT, 'tests', 'test_cache')
+    os.makedirs(cache_path, exist_ok=True)
+
+    scanner = Scanner(symbols_list=symbols_list, start_date=start_date,
+                      end_date=end_date, quote_channel=quote_channel,
+                      adjust_prices=adjust_prices,
+                      smoother=smoother,
+                      analyzer=get_analyzer,
+                      cache_path=cache_path)
+
+    return scanner

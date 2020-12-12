@@ -88,26 +88,8 @@ def get_running_window_smoothing_params():
 
     return params
 
-
 @pytest.fixture
-def get_linear():
-    x = np.linspace(start=-1.0, stop=1.0, num=150000)
-    y = x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
-
-    return x, y
-
-
-@pytest.fixture
-def get_poly_deg2():
-    x = np.linspace(start=-1, stop=1, num=10000)
-    x = (-2 * x) + np.power(x, 2)
-    y = x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
-
-    return x, y
-
-
-@pytest.fixture
-def get_fit_polyfit_params():
+def get_fit_polyfit_params(self):
     method = 'polyfit'
     poly_degree = 3
 
@@ -119,49 +101,47 @@ def get_fit_polyfit_params():
     return params
 
 
-@pytest.fixture
-def get_forecasting_data():
-    noise_scale = 0.1
-    window_length = 100000
-    trend = np.linspace(start=-2, stop=2, num=window_length)
-    scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
-    offset = np.random.uniform(low=-2, high=2, size=(1, ))
-    noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+class BaseForecastTestingData:
+    def get_linear(self):
+        self.x = np.linspace(start=-1.0, stop=1.0, num=150000)
+        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
 
-    x = offset + scale * trend
-    y = x + noise
+    def get_poly_deg2(self):
+        x = np.linspace(start=-1, stop=1, num=10000)
+        self.x = (-2 * x) + np.power(x, 2)
+        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(x, )))
 
-    return x, y
+    def get_forecasting_data(self):
+        noise_scale = 0.1
+        window_length = 100000
+        trend = np.linspace(start=-2, stop=2, num=window_length)
+        scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
+        offset = np.random.uniform(low=-2, high=2, size=(1, ))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
 
+        self.x = offset + scale * trend
+        self.y = self.x + noise
 
-@pytest.fixture
-def get_forecasting_data_poly_deg2():
-    noise_scale = 0.1
-    window_length = 100000
-    trend = np.linspace(start=-2, stop=2, num=window_length)
-    trend = (1.5 * trend) + (-2 * np.power(trend, 2))
-    offset = np.random.uniform(low=-2, high=2, size=(1, ))
-    noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
+    def get_forecasting_data_poly_deg2(self):
+        noise_scale = 0.1
+        window_length = 100000
+        trend = np.linspace(start=-2, stop=2, num=window_length)
+        trend = (1.5 * trend) + (-2 * np.power(trend, 2))
+        offset = np.random.uniform(low=-2, high=2, size=(1, ))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
 
-    x = offset + trend
-    y = x + noise
+        self.x = offset + trend
+        self.y = self.x + noise
 
-    return x, y
+    def get_forecasting_data_arima(self):
+        noise_scale = 0.01
+        window_length = 100
+        trend = np.linspace(start=-2, stop=2, num=window_length)
+        scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
+        offset = np.random.uniform(low=-2, high=2, size=(1, ))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
 
-
-@pytest.fixture
-def get_forecasting_data_arima():
-    noise_scale = 0.01
-    window_length = 100
-    trend = np.linspace(start=-2, stop=2, num=window_length)
-    scale = np.random.uniform(low=-0.5, high=0.5, size=(1, ))
-    offset = np.random.uniform(low=-2, high=2, size=(1, ))
-    noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length, ))
-
-    x = offset + scale * trend
-    y = x + noise
-
-    return x, y
-
+        self.x = offset + scale * trend
+        self.y = self.x + noise
 
 

@@ -2,7 +2,7 @@ from abc import ABC
 from typing import List
 from src.analysis.smoothing import Smoother
 from src.analysis.analyzing import Analyzer
-from src.io.data_queries import get_multiple_assets
+from src.stocks_io.data_queries import get_multiple_assets
 
 
 class Scanner(ABC):

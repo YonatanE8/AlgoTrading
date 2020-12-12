@@ -24,7 +24,7 @@ Validate that all tests are passing.
 
 ## Getting Started
 The **recommended** place to start with is the **getting_started** jupyter-notebook, 
-located at the **notebooks** directory, under the project's root directory.
+located at **AlgoTrading\src\notebooks**.
 
 Additionally, all methods and classes are well-documented, so please feel free to check
 their docstrings for in-depth details.

@@ -1,5 +1,5 @@
 from src import PROJECT_ROOT
-from src.io.data_queries import get_multiple_assets
+from src.stocks_io.data_queries import get_multiple_assets
 from src.visualizations.plot_assets import plot_assets_list
 
 import os

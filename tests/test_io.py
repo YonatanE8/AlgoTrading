@@ -1,6 +1,6 @@
 from datetime import datetime
 from src.utils.hashing import dict_hash
-from src.io.data_queries import (
+from src.stocks_io.data_queries import (
     get_sp500_symbols_wiki,
     get_nasdaq_listed_symbols,
     _load_asset_data,

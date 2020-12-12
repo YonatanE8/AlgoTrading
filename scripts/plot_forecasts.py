@@ -1,5 +1,5 @@
 from src import PROJECT_ROOT
-from src.io.data_queries import get_asset_data
+from src.stocks_io.data_queries import get_asset_data
 from src.analysis.smoothing import Smoother
 from src.analysis.forecasting import Forecaster
 from src.visualizations.plot_assets import plot_forecasts
@@ -24,8 +24,8 @@ smoother = Smoother(method='polyfit', poly_degree=4)
 # Define Forecaster
 # method = 'arima'
 method = 'smoother'
-forecast_horizon = 66
-period_length = 222
+forecast_horizon = 22
+period_length = 66
 
 arima_orders = (5, 2, 1)
 arima_prediction_type = 'levels'

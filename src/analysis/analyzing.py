@@ -1,6 +1,6 @@
 from abc import ABC
 from scipy.signal import welch
-from src.io.data_queries import get_asset_data, get_multiple_assets
+from src.stocks_io.data_queries import get_asset_data, get_multiple_assets
 
 import numpy as np
 

@@ -1,5 +1,5 @@
 from src import PROJECT_ROOT
-from setuptools import setup, find_packages
+from setuptools import setup
 
 import os
 
@@ -16,7 +16,15 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/YonatanE8/AlgoTrading",
-    packages=find_packages(),
+    install_requires=[
+        'beautifulsoup4',
+        'numpy',
+        'yfinance',
+        'scipy',
+        'statsmodels',
+        'matplotlib',
+        'seaborn',
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3.0",

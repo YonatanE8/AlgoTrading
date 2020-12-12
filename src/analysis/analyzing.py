@@ -55,25 +55,32 @@ class Analyzer(ABC):
         self.trend_period_length = trend_period_length
 
         # Query assets
-        quotes = get_multiple_assets(symbols_list=symbols_list, start_date=start_date,
-                                     end_date=end_date,
-                                     quote_channels=(quote_channel,),
-                                     adjust_prices=adjust_prices,
-                                     cache_path=cache_path)
+        quotes, _ = get_multiple_assets(symbols_list=symbols_list,
+                                        start_date=start_date,
+                                        end_date=end_date,
+                                        quote_channels=(quote_channel,),
+                                        adjust_prices=adjust_prices,
+                                        cache_path=cache_path)
         self.quotes = quotes[quote_channel]
         self.returns = self._compute_returns(self.quotes)
 
         # Query the risk free asset
-        risk_free_asset = get_asset_data(symbol=risk_free_asset_symbol,
-                                         start_date=start_date, end_date=end_date,
-                                         quote_channels=(quote_channel,),
-                                         adjust_prices=adjust_prices,
-                                         cache_path=cache_path)
+        risk_free_asset, _ = get_asset_data(symbol=risk_free_asset_symbol,
+                                            start_date=start_date, end_date=end_date,
+                                            quote_channels=(quote_channel,),
+                                            adjust_prices=adjust_prices,
+                                            cache_path=cache_path)
         self.risk_free_asset = risk_free_asset[quote_channel]
 
         # Risk-free asset is already reported as returns, remove the first entry so that
-        # the risk-free returns will align with the assets' returns
-        self.risk_free_returns = self.risk_free_asset[1:]
+        # the risk-free returns will align with the assets' returns.
+        # We also divide by 100 since the risk-free return is specified in %
+        self.risk_free_returns = self.risk_free_asset[1:] / 100
+
+        # Place-holders
+        self.spectral_components = None
+        self.spectral_components_freqs = None
+        self.spectral_components_energies = None
 
     def _compute_returns(self, quotes: np.ndarray) -> np.ndarray:
         """
@@ -99,13 +106,16 @@ class Analyzer(ABC):
         # Compute the excess returns and standard-deviation of the excess returns
         excess_returns = self.returns - np.expand_dims(self.risk_free_returns, 1)
 
-        n_samples = excess_returns.shape[0] - 1
-        excess_returns_stds = [np.std(excess_returns[:i + 1, :], axis=0, keepdims=True)
-                               for i in range(1, n_samples)]
-        excess_returns_stds = np.concatenate(excess_returns_stds, axis=0)
+        # Sum excess returns over temporal intervals
+        cumsum_excess_returns = np.cumsum(excess_returns, axis=0)
 
         # Compute SR
-        sr = excess_returns / excess_returns_stds
+        n_samples = excess_returns.shape[0]
+        excess_returns_stds = [np.std(cumsum_excess_returns[:i + 1, :],
+                                      axis=0, keepdims=True)
+                               for i in range(1, n_samples)]
+        excess_returns_stds = np.concatenate(excess_returns_stds, axis=0)
+        sr = cumsum_excess_returns[1:] / excess_returns_stds
 
         return sr
 
@@ -127,10 +137,17 @@ class Analyzer(ABC):
 
         :return: (np.ndarray, np.ndarray) A tuple of two np.ndarray, the first contains
         the limits of returns value of each bin of the histogram, and the second
-        contains the bin's value count.
+        contains the bin's count value reported as density in relation to the counts
+        in all other bins.
         """
 
-        counts, values = np.histogram(self.returns, bins=self.bins, density=True)
+        hist = [np.histogram(self.returns[:, i], bins=self.bins, density=False)
+                for i in range(len(self.symbols_list))]
+        counts = [np.expand_dims((h[0] / np.sum(h[0], axis=0, keepdims=True)), 1)
+                  for h in hist]
+        counts = np.concatenate(counts, 1)
+        values = [np.expand_dims(h[1], 1) for h in hist]
+        values = np.concatenate(values, 1)
 
         return values, counts
 
@@ -163,6 +180,112 @@ class Analyzer(ABC):
 
         return self._compute_mean_annual_return()
 
+    def _get_spectral_components(
+            self, quotes: np.ndarray) -> None:
+        """
+        A utility method for computing the spectral components of an inputted signal
+        and filter for those who passes a given threshold.
+
+        :param quotes: (np.ndarray) The signal to analyze
+
+        :return: None
+        """
+
+        # Compute power spectrum and get spectral components
+        frequencies, power_spectrum = welch(quotes, fs=1.0, window='hann',
+                                            return_onesided=True, scaling='density',
+                                            axis=0)
+        total_energy = np.sum(power_spectrum, axis=0)
+        normalized_power_spectrum = power_spectrum / np.expand_dims(total_energy, 0)
+
+        spectral_components = [
+            np.where(normalized_power_spectrum[:, i] >
+                     self.spectral_energy_threshold)[0]
+            for i in range(self.n_assets)
+        ]
+        spectral_components_freqs = [
+            frequencies[component]
+            for component in spectral_components if len(component)
+        ]
+        spectral_components_energies = [
+            normalized_power_spectrum[component, i]
+            for i, component in enumerate(spectral_components) if len(component)
+        ]
+
+        self.spectral_components_freqs = spectral_components_freqs
+        self.spectral_components_energies = spectral_components_energies
+
+    def generate_periodic_signal(self, quotes: np.ndarray,
+                                 x_axis: np.ndarray) -> np.ndarray:
+        """
+        A utility method for generating a periodic signal based on a given raw signal
+        and a temporal axis on which to calculate the signal
+
+        :param quotes: (np.ndarray) The raw signal based on which to generate the signal
+        :param x_axis: (np.ndarray) The temporal points for which to generate the signal
+        (can be used also for future forecasting).
+
+        :return: (np.ndarray) The computed periodic signal
+        """
+
+        assert (self.spectral_components_energies is not None and
+                self.spectral_components_freqs is not None), \
+            "Cannot call generate_periodic_signal without first calling " \
+            "_get_spectral_components at least once, since otherwise we have no " \
+            "spectral components based on which to compute the signal."
+
+        periodic_signal = [
+            (np.sum(
+                np.concatenate(
+                    [np.expand_dims((
+                            self.spectral_components_energies[c][f] *
+                            np.sin(2 * np.pi * freq * x_axis)),
+                        1)
+                        for f, freq in enumerate(component)],
+                    1),
+                axis=1) / len(component)) if len(component) else np.zeros_like(x_axis)
+            for c, component in enumerate(self.spectral_components_freqs)
+        ]
+
+        # Concatenate all signals
+        periodic_signal = np.concatenate([np.expand_dims(sig, 1)
+                                          for sig in periodic_signal], 1)
+
+        # Compute the offset of the periodic signal as the running mean of the
+        # acutal raw signal
+        sums = [
+            np.mean(quotes[:(i + 1), :], axis=0, keepdims=True)
+            for i in range(self.trend_period_length - 1)
+        ]
+        sums.extend(
+            [
+                np.mean(quotes[i:(i + (self.trend_period_length)), :], axis=0,
+                        keepdims=True)
+                for i in range((quotes.shape[0] - self.trend_period_length))
+            ]
+        )
+        sums = np.concatenate(sums, 0)
+
+        # Compute the amplitude of the periodic signal as the running std of the
+        # acutal raw signal
+        sums_std = [
+            np.std(quotes[:(i + 1), :], axis=0, keepdims=True)
+            for i in range(self.trend_period_length - 1)
+        ]
+        sums_std.extend(
+            [
+                np.std(quotes[i:(i + (self.trend_period_length)), :], axis=0,
+                       keepdims=True)
+                for i in range((quotes.shape[0] - self.trend_period_length))
+            ]
+        )
+        sums_std = np.concatenate(sums_std, 0)
+
+        # Generate the finalized signal
+        final_signal = (sums_std * periodic_signal) + sums
+
+        return final_signal
+
     def _analyze_periodicty(self, quotes: np.ndarray) -> np.ndarray:
         """
         Performs a spectrum estimation for each asset using the Welch power-spectrum
@@ -181,54 +304,11 @@ class Analyzer(ABC):
         :return: (np.ndarray) The final periodic signal
         """
 
-        # Compute power spectrum and get spectral components
-        frequencies, power_spectrum = welch(quotes, fs=1.0, window='hann',
-                                            return_onesided=True, scaling='density',
-                                            axis=0)
-        total_energy = np.sum(power_spectrum, axis=0)
-        normalized_power_spectrum = power_spectrum / np.expand_dims(total_energy, 0)
+        self._get_spectral_components(quotes=quotes)
 
-        spectral_components = [
-            np.where(normalized_power_spectrum[:, i] >
-                     self.spectral_energy_threshold)[0]
-            for i in range(self.n_assets)
-        ]
-
-        spectral_components_freqs = [
-            frequencies[component]
-            for component in spectral_components if len(component)
-        ]
-
-        spectral_components_energies = [
-            normalized_power_spectrum[component, i]
-            for i, component in enumerate(spectral_components) if len(component)
-        ]
-
-        # Copmute periodic signal for each component
-        x_axis = np.arange(len(quotes.shape[0]))
-        periodic_signal = [
-            (np.sum(
-                np.concatenate(
-                    [np.expand_dims((
-                            spectral_components_energies[c] *
-                            np.sin(2 * np.pi * freq * x_axis)),
-                        1)
-                        for freq in component],
-                    1),
-                axis=1) / len(component)) if len(component) else np.zeros_like(x_axis)
-            for c, component in enumerate(spectral_components_freqs)
-        ]
-
-        # Concatenate all signals
-        periodic_signal = np.concatenate([np.expand_dims(sig, 1)
-                                          for sig in periodic_signal], 1)
-
-        # Add the running average window
-        sums = np.cumsum(quotes, axis=0)
-        sums = [np.expand_dims(sums[i, :], 0) / (i + 1) for i in range(quotes.shape[0])]
-        sums = np.concatenate(sums, 0)
-
-        final_signal = periodic_signal + sums
+        # Compute periodic signal for each component
+        x_axis = np.arange(quotes.shape[0] - 1)
+        final_signal = self.generate_periodic_signal(quotes=quotes, x_axis=x_axis)
 
         return final_signal
 
@@ -245,7 +325,7 @@ class Analyzer(ABC):
         standard deviation over the same period
         """
 
-        period = quotes[-self.trend_period_length:, :]
+        period = quotes[-(self.trend_period_length + 1):, :]
         returns = self._compute_returns(period)
         trend_mean = np.mean(returns, axis=0)
         trend_std = np.std(returns, axis=0)
@@ -257,19 +337,30 @@ class Analyzer(ABC):
         Utility method for computing the overall return of each asset over the most
         recent trading period, where the length of the period if determined by
         the 'trend_period_length' parameter given in the constructor.
-        :return:
+
+        :return: (np.ndarray) The overall return of each asset of the specified period
         """
 
-        pass
+        # Get period
+        recent_quotes = self.quotes[-(self.trend_period_length - 1):, :]
+
+        # Compute overall returns
+        overall_returns = ((recent_quotes[-1, :] - recent_quotes[0, :]) /
+                           recent_quotes[0, :])
+
+        return overall_returns
 
     @property
     def overall_period_return(self) -> np.ndarray:
         """
+        Class property, denoting the overall return of each asset over the most
+        recent trading period, where the length of the period if determined by
+        the 'trend_period_length' parameter given in the constructor.
 
-        :return:
+        :return: (np.ndarray) The overall return of each asset of the specified period
         """
 
-        pass
+        return self._compute_overall_period_return()
 
     def analyze(self, quotes: np.ndarray = None) -> dict:
         """
@@ -286,7 +377,7 @@ class Analyzer(ABC):
         specified in the constructor.
         'recent_trend_std': std of returns, per assets over the most recent 'period'
         specified in the constructor.
-        'periodicity': Linear combinations of sin functions based on the Welch
+        'periodicity': Linear combinations of sin functions based on Welch's
         power-spectrum estimation, which should fit each asset.
         """
 
@@ -313,4 +404,3 @@ class Analyzer(ABC):
         }
 
         return analysis
-

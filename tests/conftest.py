@@ -1,4 +1,5 @@
 from src import PROJECT_ROOT
+from src.analysis.analyzing import Analyzer
 
 import os
 import pytest
@@ -144,5 +145,30 @@ class BasicTestingData:
 
         self.x = offset + scale * trend
         self.y = self.x + noise
+
+
+@pytest.fixture
+def get_analyzer():
+    symbols_list = ("MSFT", "AAPL", "JPM", "C", "DIS")
+    start_date = "2015-01-01"
+    end_date = "2016-01-01"
+    quote_channel = 'Close'
+    adjust_prices = True
+    risk_free_asset_symbol = '^IRX'
+    bins = 10
+    spectral_energy_threshold = 0.05
+    trend_period_length = 10
+    cache_path = os.path.join(PROJECT_ROOT, 'tests', 'test_cache')
+    os.makedirs(cache_path, exist_ok=True)
+
+    analyzer = Analyzer(symbols_list=symbols_list, start_date=start_date,
+                        end_date=end_date, quote_channel=quote_channel,
+                        adjust_prices=adjust_prices,
+                        risk_free_asset_symbol=risk_free_asset_symbol,
+                        bins=bins, spectral_energy_threshold=spectral_energy_threshold,
+                        trend_period_length=trend_period_length,
+                        cache_path=cache_path)
+
+    return analyzer
 
 

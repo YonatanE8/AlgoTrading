@@ -241,6 +241,46 @@ class Analyzer(ABC):
 
         return trend_mean, trend_std
 
+    def analyze(self, quotes: np.ndarray = None) -> dict:
+        """
+        The main method to use in the Analyzer class. It runs all currently available
+        analysis  methods and returns per-assets results
 
+        :param quotes: (np.ndarray) quotes to analyze, if None uses the quotes
+        queried in the constructor.
 
+        :return: (dict) a dictionary with the following key-value pairs:
+        'sr': Sharpe-Ratio per-time point, per-asset
+        'mean': mean annualized returns, per assets, over the entire period
+        'recent_trend_mean': mean of returns, per assets over the most recent 'period'
+        specified in the constructor.
+        'recent_trend_std': std of returns, per assets over the most recent 'period'
+        specified in the constructor.
+        'periodicity': Linear combinations of sin functions based on the Welch
+        power-spectrum estimation, which should fit each asset.
+        """
+
+        # Check inputs
+        assert quotes is not None or self.quotes is not None, \
+            f"Cannot pass quotes as None without also specifying querying " \
+            f"parameters at construction time."
+
+        if quotes is None:
+            quotes = self.quotes
+
+        # Perform analysis
+        sr = self.sr
+        periodicity = self._analyze_periodicty(quotes=quotes)
+        mean_annual_returns = self.mean_annual_return
+        trend_mean, trend_std = self._returns_emerging_trend(quotes=quotes)
+
+        analysis = {
+            'sr': sr,
+            'mean': mean_annual_returns,
+            'recent_trend_mean': trend_mean,
+            'recent_trend_std': trend_std,
+            'periodicity': periodicity,
+        }
+
+        return analysis
 

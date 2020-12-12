@@ -261,10 +261,39 @@ class Scanner(ABC):
 
         return True
 
-    def scan_for_potential_assets(self, ) -> List[str]:
+    def scan_for_potential_assets(self) -> List[str]:
+        """
+        The main method to be used by a user in the Scanner class. After all macro &
+        quotes criterions have been specified, scan all assets given in construction
+        over the specified temporal period, and detect all asset that fit the
+        required criterions.
+
+        :return: (list) A list of string, containing the trade symbols of all suitable
+        assets.
         """
 
-        :return:
-        """
+        if self._analyzer is not None:
+            quotes_analysis = self._analyzer.analyze()
 
-        raise NotImplemented
+        else:
+            quotes_analysis = None
+
+        symbols = []
+        for i, symbol in enumerate(self.symbols_list):
+            macro = self.macros[i]
+            quotes_criterions = {key: quotes_analysis[key][:, i]
+                                 for key in quotes_analysis} \
+                if quotes_analysis is not None else None
+
+            macro_criterion = self._test_macro_criterion(
+                asset_macro=macro, current_price=self.quotes[-1, i], ignore_none=True)
+
+            quote_criterion = self._test_quote_criterion(
+                asset_quote_stats=quotes_criterions) \
+                if quotes_criterions is not None else True
+
+            if quote_criterion and macro_criterion:
+                symbols.append(symbol)
+
+        return symbols
+

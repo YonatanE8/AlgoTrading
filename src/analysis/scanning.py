@@ -11,18 +11,6 @@ class Scanner(ABC):
     macro_criterions in order to automatically detect promising assets for investment.
     """
 
-    def set_smoother(self, smoother: Smoother) -> None:
-        """
-        A method for setting a Smoother object, enabling the analysis to be performed
-        over a smoothed signal instead of over the raw signal itself.
-
-        :param smoother: (Smoother) An instantiated smoother object to be used.
-
-        :return: None
-        """
-
-        self._smoother = smoother
-
     def __init__(self, symbols_list: (str, ...), start_date: str, end_date: str,
                  quote_channel: str, adjust_prices: bool = True,
                  smoother: Smoother = None, analyzer: Analyzer = None,
@@ -90,6 +78,18 @@ class Scanner(ABC):
             'overall_period_return',
         ]
         self.quote_criterions = {}
+
+    def set_smoother(self, smoother: Smoother) -> None:
+        """
+        A method for setting a Smoother object, enabling the analysis to be performed
+        over a smoothed signal instead of over the raw signal itself.
+
+        :param smoother: (Smoother) An instantiated smoother object to be used.
+
+        :return: None
+        """
+
+        self._smoother = smoother
 
     def set_analyzer(self, analyzer: Analyzer) -> None:
         """

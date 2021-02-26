@@ -1,13 +1,14 @@
-from typing import Dict
-from datetime import datetime
-from src.utils.hashing import dict_hash
-
 import os
 import pickle
-import requests
+from datetime import datetime
+from typing import Dict
+
 import bs4 as bs
 import numpy as np
+import requests
 import yfinance as yf
+
+from src.utils.hashing import dict_hash
 
 
 def get_sp500_symbols_wiki(
@@ -273,10 +274,14 @@ def get_asset_data(symbol: str, start_date: str, end_date: str = None,
     return quotes, macros
 
 
-def _load_multiple_assets(symbols_list: (str, ...), start_date: str,
-                          end_date: str = None,
-                          quote_channels: (str, ...) = ('Adj Close', ...),
-                          adjust_prices: bool = True) -> (dict, [dict, ...]):
+def _load_multiple_assets(
+        symbols_list: (str, ...),
+        start_date: str,
+        end_date: str = None,
+        quote_channels: (str, ...) = ('Adj Close', ...),
+        adjust_prices: bool = True,
+        cache_path: str = None,
+) -> (dict, [dict, ...]):
     """
     A utility method for loading  N multiple assets,
     used by the get_multiple_assets method.
@@ -306,19 +311,70 @@ def _load_multiple_assets(symbols_list: (str, ...), start_date: str,
     # Load all requested assets
     quotes = []
     macros = []
+    if cache_path is not None:
+        cache_path = os.path.join(cache_path, 'single_assets')
+        os.makedirs(cache_path, exist_ok=True)
+
     for symbol in symbols_list:
         print(f"Loading data for {symbol}")
 
-        try:
-            quote, macro = _load_asset_data(symbol=symbol, start_date=start_date,
-                                            end_date=end_date,
-                                            quote_channels=quote_channels,
-                                            adjust_prices=adjust_prices)
-            quotes.append(quote)
-            macros.append(macro)
+        # Generate cache signature
+        if cache_path is not None:
+            input_dict = {
+                'symbol': symbol,
+                'start_date': start_date,
+                'end_date': end_date,
+                'quote_channels': quote_channels,
+                'adjust_prices': adjust_prices,
+            }
+            hash_signature = dict_hash(input_dict)
+            data_file = os.path.join(cache_path, (hash_signature + '.pkl'))
 
-        except ValueError:
-            print(f"Could not load the data for {symbol}")
+            # Check if the data was already cached
+            if os.path.isfile(data_file):
+                with open(data_file, 'rb') as f:
+                    cached_data = pickle.load(f)
+                    quote, macro = cached_data['quote'], cached_data['macro']
+
+                quotes.append(quote)
+                macros.append(macro)
+
+            else:
+                try:
+                    quote, macro = _load_asset_data(symbol=symbol, start_date=start_date,
+                                                    end_date=end_date,
+                                                    quote_channels=quote_channels,
+                                                    adjust_prices=adjust_prices)
+
+                except ValueError:
+                    print(f"Could not load the data for {symbol}")
+                    continue
+
+                except KeyError:
+                    print(f"Could not load the data for {symbol}")
+                    continue
+
+                with open(data_file, 'wb') as f:
+                    pickle.dump(obj={'quote': quote, 'macro': macro}, file=f)
+
+                quotes.append(quote)
+                macros.append(macro)
+
+        else:
+            try:
+                quote, macro = _load_asset_data(symbol=symbol, start_date=start_date,
+                                                end_date=end_date,
+                                                quote_channels=quote_channels,
+                                                adjust_prices=adjust_prices)
+
+                quotes.append(quote)
+                macros.append(macro)
+
+            except ValueError:
+                print(f"Could not load the data for {symbol}")
+
+            except KeyError:
+                print(f"Could not load the data for {symbol}")
 
     # Concatenate the quotes NumPy arrays
     dates = quotes[0]['Dates']
@@ -382,20 +438,25 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
                 quotes, macros = cached_data['quotes'], cached_data['macros']
 
         else:
-            quotes, macros = _load_multiple_assets(symbols_list=symbols_list,
-                                                   start_date=start_date,
-                                                   end_date=end_date,
-                                                   quote_channels=quote_channels,
-                                                   adjust_prices=adjust_prices)
+            quotes, macros = _load_multiple_assets(
+                symbols_list=symbols_list,
+                start_date=start_date,
+                end_date=end_date,
+                quote_channels=quote_channels,
+                adjust_prices=adjust_prices,
+                cache_path=cache_path,
+            )
 
             with open(data_file, 'wb') as f:
                 pickle.dump(obj={'quotes': quotes, 'macros': macros}, file=f)
 
     else:
-        quotes, macros = _load_multiple_assets(symbols_list=symbols_list,
-                                               start_date=start_date,
-                                               end_date=end_date,
-                                               quote_channels=quote_channels,
-                                               adjust_prices=adjust_prices)
+        quotes, macros = _load_multiple_assets(
+            symbols_list=symbols_list,
+            start_date=start_date,
+            end_date=end_date,
+            quote_channels=quote_channels,
+            adjust_prices=adjust_prices,
+        )
 
     return quotes, macros

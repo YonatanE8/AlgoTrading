@@ -30,6 +30,8 @@ setup(
         'jupyterlab',
         'requests',
         'pytest',
+        'html5lib',
+        ''
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -31,7 +31,7 @@ setup(
         'requests',
         'pytest',
         'html5lib',
-        ''
+        'plotly',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

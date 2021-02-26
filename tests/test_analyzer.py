@@ -3,6 +3,9 @@ import numpy as np
 
 
 class TestAnalyzer:
+    def _clear_test_cache(self, get_analyzer, clear_test_cache_dir):
+        clear_test_cache_dir(get_analyzer.cache_path)
+
     def test_compute_returns(self, get_analyzer):
         returns = get_analyzer.returns
 

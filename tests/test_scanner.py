@@ -1,10 +1,8 @@
-from src.analysis.scanning import Scanner
-
 import pytest
 
 
 class TestScanner:
-    def test_set_criterions(self, get_scanner):
+    def test_set_criterions(self, get_scanner, clear_test_cache_dir):
         macro_criterion = {
             'some_false_criterion': (0, 1)
         }
@@ -18,7 +16,3 @@ class TestScanner:
 
         with pytest.raises(AssertionError):
             get_scanner.set_quote_criterions(quote_criterion)
-
-    
-
-

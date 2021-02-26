@@ -5,6 +5,8 @@ from src.analysis.forecasting import Forecaster
 from src.visualizations.plot_assets import plot_forecasts
 
 import os
+import plotly.graph_objs as go
+
 
 # Define data parameters
 symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
@@ -34,12 +36,14 @@ forecaster = Forecaster(method=method, forecast_horizon=forecast_horizon,
                         arima_prediction_type=arima_prediction_type)
 
 # Plotting parameters
-linewidth = 1.
-markersize = 2.5
-alpha = 0.4
-save_plot_path = None
-save_report_path = None
-
+display_meta_paramets = (
+    'five_years_div_yield',
+    'book2value_ratio',
+    'high_52w',
+    'low_52w',
+    'profit_margins',
+    'trailing_price2earnings',
+)
 if __name__ == '__main__':
     for symbol in symbols_list:
         # Get data
@@ -54,21 +58,9 @@ if __name__ == '__main__':
                    for i in range(n_periods)]
         dates = quotes['Dates']
 
-        if save_plot_path is not None:
-            save_plot_path_symbol = os.path.join(save_plot_path, (symbol + '.png'))
-
-        else:
-            save_plot_path_symbol = None
-
-        if save_report_path is not None:
-            save_report_path_symbol = os.path.join(save_report_path, (symbol + '.png'))
-
-        else:
-            save_report_path_symbol = None
-
         # Plot forecast
-        plot_forecasts(periods=periods, smoother=smoother, forecaster=forecaster,
-                       asset_symbol=symbol, dates=dates, asset_meta_data=macros,
-                       save_plot_path=save_plot_path_symbol,
-                       save_report_path=save_report_path_symbol,
-                       linewidth=linewidth, markersize=markersize, alpha=alpha)
+        figure = go.Figure()
+        plot_forecasts(
+            periods=periods, smoother=smoother, forecaster=forecaster,
+            asset_symbol=symbol, dates=dates, asset_meta_data=macros,
+            display_meta_paramets=display_meta_paramets, figure=figure)

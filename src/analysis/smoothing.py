@@ -106,7 +106,7 @@ class Smoother(ABC):
         :return: (NumPy array) The smoothed time-series
         """
 
-        exp_smooth = ExponentialSmoothing(time_series, damped=False,
+        exp_smooth = ExponentialSmoothing(time_series, damped_trend=False,
                                           trend=self.trend).fit()
         self.exp_smoother = exp_smooth
         smoothed_time_series = exp_smooth.fittedvalues

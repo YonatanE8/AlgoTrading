@@ -26,9 +26,14 @@ smoothers = [
     Smoother(method='holt_winter', trend=None),
     Smoother(method='polyfit', poly_degree=15),
 ]
-linewidth = 1.5
-markersize = 2.5
-alpha = 0.75
+display_meta_paramets = (
+    'five_years_div_yield',
+    'book2value_ratio',
+    'high_52w',
+    'low_52w',
+    'profit_margins',
+    'trailing_price2earnings',
+)
 plot_smooth_assets_list(assets_symbols=symbols_list, assets_data=assets_data,
                         smoothers=smoothers, dates=dates, assets_meta_data=macros,
-                        linewidth=linewidth, markersize=markersize, alpha=alpha)
+                        display_meta_paramets=display_meta_paramets)

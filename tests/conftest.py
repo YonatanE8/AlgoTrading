@@ -3,6 +3,7 @@ from src.analysis.scanning import Scanner
 from src.analysis.analyzing import Analyzer
 
 import os
+import shutil
 import pytest
 import numpy as np
 
@@ -103,50 +104,6 @@ def get_fit_polyfit_params():
     return params
 
 
-class BasicTestingData:
-    def get_linear(self):
-        self.x = np.linspace(start=-1.0, stop=1.0, num=150000)
-        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(self.x, )))
-
-    def get_poly_deg2(self):
-        x = np.linspace(start=-1, stop=1, num=10000)
-        self.x = (-2 * x) + np.power(x, 2)
-        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(self.x, )))
-
-    def get_forecasting_data(self):
-        noise_scale = 0.1
-        window_length = 100000
-        trend = np.linspace(start=-2, stop=2, num=window_length)
-        scale = np.random.uniform(low=-0.5, high=0.5, size=(1,))
-        offset = np.random.uniform(low=-2, high=2, size=(1,))
-        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
-
-        self.x = offset + scale * trend
-        self.y = self.x + noise
-
-    def get_forecasting_data_poly_deg2(self):
-        noise_scale = 0.1
-        window_length = 100000
-        trend = np.linspace(start=-2, stop=2, num=window_length)
-        trend = (1.5 * trend) + (-2 * np.power(trend, 2))
-        offset = np.random.uniform(low=-2, high=2, size=(1,))
-        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
-
-        self.x = offset + trend
-        self.y = self.x + noise
-
-    def get_forecasting_data_arima(self):
-        noise_scale = 0.01
-        window_length = 100
-        trend = np.linspace(start=-2, stop=2, num=window_length)
-        scale = np.random.uniform(low=-0.5, high=0.5, size=(1,))
-        offset = np.random.uniform(low=-2, high=2, size=(1,))
-        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
-
-        self.x = offset + scale * trend
-        self.y = self.x + noise
-
-
 @pytest.fixture
 def get_analyzer():
     symbols_list = ("MSFT", "AAPL", "JPM", "C", "DIS")
@@ -191,3 +148,82 @@ def get_scanner(get_analyzer):
                       cache_path=cache_path)
 
     return scanner
+
+
+class BasicTestingData:
+    def get_linear(self):
+        self.x = np.linspace(start=-1.0, stop=1.0, num=150000)
+        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(self.x, )))
+
+    def get_poly_deg2(self):
+        x = np.linspace(start=-1, stop=1, num=10000)
+        self.x = (-2 * x) + np.power(x, 2)
+        self.y = self.x + np.random.normal(loc=0, scale=0.1, size=(len(self.x, )))
+
+    def get_forecasting_data(self):
+        noise_scale = 0.1
+        window_length = 100000
+        trend = np.linspace(start=-2, stop=2, num=window_length)
+        scale = np.random.uniform(low=-0.5, high=0.5, size=(1,))
+        offset = np.random.uniform(low=-2, high=2, size=(1,))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
+
+        self.x = offset + scale * trend
+        self.y = self.x + noise
+
+    def get_forecasting_data_poly_deg2(self):
+        noise_scale = 0.1
+        window_length = 100000
+        trend = np.linspace(start=-2, stop=2, num=window_length)
+        trend = (1.5 * trend) + (-2 * np.power(trend, 2))
+        offset = np.random.uniform(low=-2, high=2, size=(1,))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
+
+        self.x = offset + trend
+        self.y = self.x + noise
+
+    def get_forecasting_data_arima(self):
+        noise_scale = 0.01
+        window_length = 100
+        trend = np.linspace(start=-2, stop=2, num=window_length)
+        scale = np.random.uniform(low=-0.5, high=0.5, size=(1,))
+        offset = np.random.uniform(low=-2, high=2, size=(1,))
+        noise = np.random.normal(loc=0, scale=noise_scale, size=(window_length,))
+
+        self.x = offset + scale * trend
+        self.y = self.x + noise
+
+
+# Clear the tests cache dir when tearing down the tests session
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Called after whole test run finished, right before
+    returning the exit status to the system.
+
+    :param session: (pytest.Session) – The pytest session object.
+    :param exitstatus: (int) – The status which pytest will return to the system.
+
+    :return: None
+    """
+
+    # Get the tests cache dir location
+    cache_dir_path = os.path.join(PROJECT_ROOT, 'tests', 'test_cache')
+
+    # Get all files in the cache dir
+    files = [os.path.join(cache_dir_path, f) for f in os.listdir(cache_dir_path)]
+
+    # Clear all files
+    for file_path in files:
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+
+        except OSError as e:
+            print(f'Failed to delete {file_path} due to OSError: {e}')
+
+        except Exception as e:
+            print(f'Failed to delete {file_path} due to Error: {e}')
+

@@ -1,21 +1,80 @@
 from os import linesep
+from typing import Sequence, Dict, Tuple
 from datetime import datetime, timedelta
 from src.analysis.smoothing import Smoother
 from src.analysis.forecasting import Forecaster
-import matplotlib
 
-matplotlib.use('TkAgg')
-
-import os
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import plotly.graph_objs as go
+
+
+def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
+                   plotting_params: Dict = None, figure: go.Figure = None,
+                   show: bool = True):
+    """
+    A utility method for plotting multiple 2d lines on a joint figure, using the Plotly
+    package.
+
+    :param x_axes: An iterable object, where each element at index i,
+     contains an appropriate x-axis values to plot as part of plot i.
+    :param y_axes: An iterable object, where each element at index i,
+     contains an appropriate y-axis values to plot as part of plot i.
+    :param plotting_params: Meta parameters for the entire figure, i.e.:
+     xlabel, ylable, title, legend, etc.
+    :param figure: Plotly Figure object to plot on, if None generates new figure
+    :param show: (bool) Whether to display the figure or not.
+
+    :return: None
+    """
+
+    if len(x_axes) != len(y_axes):
+        raise ValueError(
+            f"'x_axes' and 'y_axes' must have exactly the same number of elements,"
+            f" however len(x_axes) = {len(x_axes)} and len(y_axes) = {len(y_axes)}."
+        )
+
+    if figure is None:
+        figure = go.Figure()
+
+    # Add the traces
+    [
+        figure.add_trace(
+            go.Scatter(
+                x=x_axes[i],
+                y=y_axes[i],
+                mode=(
+                    plotting_params['mode']
+                    if 'mode' in plotting_params else 'lines+markers'
+                ),
+                name=(
+                    plotting_params['legend'][i]
+                    if 'legend' in plotting_params else f'trace {i}'
+                ),
+                text=(
+                    plotting_params['meta_data'][i]
+                    if 'meta_data' in plotting_params else ''
+                ),
+            )
+        )
+        for i in range(len(x_axes))
+    ]
+
+    figure.update_layout(
+        title=(plotting_params['title']if 'title' in plotting_params else ''),
+        xaxis={'title': plotting_params['xlabel']
+        if 'xlabel' in plotting_params else 'X Label'},
+        yaxis={'title': plotting_params['ylabel']
+        if 'ylabel' in plotting_params else 'Y Label'},
+    )
+
+    if show:
+        figure.show()
 
 
 def plot_assets_list(assets_symbols: tuple, assets_data: list, dates: list,
-                     assets_meta_data: list, save_plot_path: str = None,
-                     save_report_path: str = None) -> None:
+                     assets_meta_data: list = None,
+                     display_meta_paramets: Tuple[str, ...] = tuple(),
+                     figure: go.Figure = None, show: bool = True):
     """
     A method for plotting a list of tradable equities
 
@@ -26,63 +85,56 @@ def plot_assets_list(assets_symbols: tuple, assets_data: list, dates: list,
     the quotes are given
     :param assets_meta_data: (list) A list of dicts containing the macro data for
     each asset to be plotted
-    :param save_plot_path: (str) Path to a directory in which to save the figure,
-    doesn't save if None, default is None.
-    :param save_report_path: (str) Path to a directory in which to save the
-    per-asset report, doesn't save if None, default is None.
+    :param display_meta_paramets: (Tuple) A tuple of string, denoting the meta
+    parameters to display for each asset.
+    :param figure: Plotly Figure object to plot on, if None generates new figure
+    :param show: (bool) Whether to display the figure or not.
 
     :return: None
     """
 
-    n_assets = len(assets_data)
-    colors = sns.color_palette('husl', n_assets)
-    fig, ax = plt.subplots(figsize=[16, 9])
     names = []
     infos = []
     dates = [datetime.strptime(date, "%Y-%m-%d") for date in dates]
-    with sns.axes_style("darkgrid"):
-        for i, asset in enumerate(assets_data):
+    x_axes = []
+    y_axes = []
+    for i, asset in enumerate(assets_data):
+        x_axes.append(dates[-len(asset):])
+        y_axes.append(asset)
+
+        names.append(f"{assets_symbols[i]}")
+
+        if assets_meta_data is not None:
             meta_info = assets_meta_data[i]
-            info = f'{linesep}'.join([f'{key}: {meta_info[key]}' for key in meta_info])
-            info = (f'{linesep}{"*" * 30}{linesep}' + info +
-                    f'{linesep}{"*" * 30}{linesep}')
-            print(info)
-            infos.append(info)
+            info = f'{linesep}'.join([f'{key}: {meta_info[key]}'
+                                      for key in meta_info
+                                      if key in display_meta_paramets])
+            infos.append([info] * len(asset))
 
-            ax.plot(dates[-len(asset):], asset, c=colors[i])
-            names.append(f"{assets_symbols[i]}: {meta_info['name']}")
+    xlabel = 'Date'
+    ylabel = 'Price [USD]'
+    plotting_params = {
+        'xlabel': xlabel,
+        'ylabel': ylabel,
+        'legend': names,
+        'title': "Equities Prices"
+    }
 
-        ax.set_ylabel('Price [USD]')
-        ax.set_xlabel('Date')
-        ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
-        fig.autofmt_xdate()
-        plt.legend(names)
+    if len(infos):
+        plotting_params['meta_data'] = infos
 
-        if save_plot_path is not None:
-            if not save_plot_path.endswith('.pdf'):
-                save_plot_path += '.pdf'
+    _plot_2d_lines(x_axes=x_axes, y_axes=y_axes, plotting_params=plotting_params,
+                   figure=figure, show=(True if figure is None else False))
 
-            plt.savefig(fname=os.path.join(save_plot_path),
-                        dpi=300, orientation='landscape', format='pdf')
-
-        if save_report_path is not None:
-            if not save_report_path.endswith('.txt'):
-                save_report_path += '.txt'
-
-            start_date = dates[0]
-            end_date = dates[-1]
-            with open(save_report_path, 'w') as report_file:
-                report_file.write(f"Asset report from {start_date} - {end_date}\n\n")
-                [report_file.write(info) for info in infos]
-
-        plt.show()
+    if show and figure is not None:
+        figure.show()
 
 
 def plot_smooth_assets_list(
-        assets_symbols: tuple, assets_data: list, dates: list, assets_meta_data: list,
-        smoothers: (Smoother, ...), save_plot_path: str = None,
-        save_report_path: str = None, linewidth: float = 1.0,
-        markersize: float = 1.0, alpha: float = 1.0) -> None:
+        assets_symbols: tuple, assets_data: list, dates: list,
+        smoothers: (Smoother, ...), assets_meta_data: list = None,
+        display_meta_paramets: Tuple[str, ...] = tuple(),
+        figure: go.Figure = None, show: bool = True):
     """
     A method for plotting a list of tradable equities after smoothening.
 
@@ -93,85 +145,58 @@ def plot_smooth_assets_list(
     the quotes are given
     :param assets_meta_data: (list) A list of dicts containing the macro data for
     each asset to be plotted
+    :param display_meta_paramets: (Tuple) A tuple of string, denoting the meta
+    parameters to display for each asset.
     :param smoothers: (list) A list of Smoother class instances. Each smoother will be
     applied to all assets and plotted together.
-    :param save_plot_path: (str) Path to a directory in which to save the figure,
-    doesn't save if None, default is None.
-    :param save_report_path: (str) Path to a directory in which to save the
-    per-asset report, doesn't save if None, default is None.
-    :param linewidth: (float) Width of the plotted line, default is 1.0.
-    :param markersize: (float) Size of the plotted markers, default is 1.0.
-    :param alpha: (float) Shade intensity for the raw data plot, default is 1.0.
+    :param figure: Plotly Figure object to plot on, if None generates new figure
+    :param show: (bool) Whether to display the figure or not.
 
     :return: None
     """
 
-    n_assets = len(assets_data)
-    colors = sns.color_palette('husl', n_assets)
-    fig, ax = plt.subplots(figsize=[16, 9])
+    # Plot the assets as is
+    figure = figure if figure is not None else go.Figure()
+
+    plot_assets_list(
+        assets_symbols=assets_symbols,
+        assets_data=assets_data,
+        dates=dates,
+        assets_meta_data=assets_meta_data,
+        display_meta_paramets=display_meta_paramets,
+        figure=figure,
+        show=False,
+    )
+
     names = []
-    infos = []
-    linestyles = ['--', '-.', ':']
-    markers = ['o', 'D', '*', 'v', '8', 's', 'p']
-    dates = [datetime.strptime(date, "%Y-%m-%d") for date in dates]
-    with sns.axes_style("darkgrid"):
-        for i, asset in enumerate(assets_data):
-            # Extract the macro info
-            meta_info = assets_meta_data[i]
-            info = f'{linesep}'.join([f'{key}: {meta_info[key]}'
-                                      for key in meta_info])
-            info = (f'{linesep}{"*" * 30}{linesep}' + info +
-                    f'{linesep}{"*" * 30}{linesep}')
-            print(info)
-            infos.append(info)
+    x_axes = []
+    y_axes = []
+    for i, asset in enumerate(assets_data):
+        # Plot smoothed data
+        for s, smoother in enumerate(smoothers):
+            smoothed_asset = smoother(asset)
+            x_axes.append(dates[-len(smoothed_asset):])
+            y_axes.append(smoothed_asset)
+            names.append(
+                f"{assets_symbols[i]} - {smoother.description}"
+            )
 
-            # Plot the un-smoothed data
-            ax.plot(dates[-len(asset):], asset, c=colors[i], linestyle='-', alpha=alpha)
-            names.append(f"{assets_symbols[i]}: {meta_info['name']}")
+    plotting_params = {
+        'legend': names,
+    }
 
-            # Plot all smoothers
-            for s, smoother in enumerate(smoothers):
-                smoothed_asset = smoother(asset)
-                ax.plot(dates[-len(smoothed_asset):], smoothed_asset,
-                        c=colors[i], linestyle=linestyles[(s % len(linestyles))],
-                        marker=markers[(s % len(markers))], linewidth=linewidth,
-                        markersize=markersize)
-                names.append(
-                    f"{assets_symbols[i]}: {meta_info['name']} - {smoother.description}"
-                )
+    _plot_2d_lines(x_axes=x_axes, y_axes=y_axes, plotting_params=plotting_params,
+                   figure=figure, show=False)
 
-        ax.set_ylabel('Price [USD]')
-        ax.set_xlabel('Date')
-        ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
-        fig.autofmt_xdate()
-        plt.legend(names)
-
-        if save_plot_path is not None:
-            if not save_plot_path.endswith('.pdf'):
-                save_plot_path += '.pdf'
-
-            plt.savefig(fname=os.path.join(save_plot_path),
-                        dpi=300, orientation='landscape', format='pdf')
-
-        if save_report_path is not None:
-            if not save_report_path.endswith('.txt'):
-                save_report_path += '.txt'
-
-            start_date = dates[0]
-            end_date = dates[-1]
-            with open(save_report_path, 'w') as report_file:
-                report_file.write(f"Asset report from {start_date} - {end_date}\n\n")
-                [report_file.write(info) for info in infos]
-
-        plt.show()
+    if show:
+        figure.show()
 
 
 def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
                    forecaster: Forecaster, asset_symbol: str,
                    dates: list, asset_meta_data: dict,
-                   save_plot_path: str = None,
-                   save_report_path: str = None, linewidth: float = 1.0,
-                   markersize: float = 1.0, alpha: float = 1.0) -> None:
+                   display_meta_paramets: Tuple[str, ...] = tuple(),
+                   figure: go.Figure = None, show: bool = True):
     """
     A method for plotting forecasts for a list of tradable equity after smoothening.
 
@@ -186,18 +211,38 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
     the quotes are given
     :param asset_meta_data: (dict) A dict containing the macro data for
     the asset to be plotted
-    :param save_plot_path: (str) Path to a directory in which to save the figure,
-    doesn't save if None, default is None.
-    :param save_report_path: (str) Path to a directory in which to save the
-    per-asset report, doesn't save if None, default is None.
-    :param linewidth: (float) Width of the plotted line, default is 1.0.
-    :param markersize: (float) Size of the plotted markers, default is 1.0.
-    :param alpha: (float) Shade intensity for the raw data plot, default is 1.0.
+    :param display_meta_paramets: (Tuple) A tuple of string, denoting the meta
+    parameters to display for each asset.
+    :param figure: Plotly Figure object to plot on, if None generates new figure
+    :param show: (bool) Whether to display the figure or not.
 
     :return: None
     """
 
-    forecasts = []
+    figure = figure if figure is not None else go.Figure()
+    plot_smooth_assets_list(
+        assets_symbols=tuple(f"{asset_symbol}: Forecast period {i}"
+                             for i in range(len(periods))),
+        assets_data=periods,
+        dates=dates,
+        assets_meta_data=None,
+        smoothers=(smoother, ),
+        display_meta_paramets=display_meta_paramets,
+        figure=figure,
+        show=False,
+    )
+
+    x_axes = []
+    y_axes = []
+    names = []
+    # Add the dates for the final forecast period
+    dates = [datetime.strptime(date, "%Y-%m-%d") for date in dates]
+    new_dates = [(dates[-1] + timedelta(days=1)), ]
+    for f in range((len(periods[-1]) - 1)):
+        new_dates.append((new_dates[-1] + timedelta(days=1)))
+
+    dates.extend(new_dates)
+
     for i, period in enumerate(periods[1:]):
         period = np.concatenate(periods[:i + 1])
         smoothed = smoother(period)
@@ -205,71 +250,19 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
         forecaster.smoother = smoother
         forecaster.arima_model = None
         forecast = forecaster(smoothed)
-        forecasts.append(forecast)
 
-    names = []
-    linestyles = ['--', '-.', ':']
-    markers = ['o', 'D', '*', 'v', '8', 's', 'p']
-    dates = [datetime.strptime(date, "%Y-%m-%d") for date in dates]
-    fig, ax = plt.subplots(figsize=[16, 9])
-    with sns.axes_style("darkgrid"):
-        # Extract the macro info
-        info = f'{linesep}'.join([f'{key}: {asset_meta_data[key]}'
-                                  for key in asset_meta_data])
-        info = (f'{linesep}{"*" * 30}{linesep}' + info +
-                f'{linesep}{"*" * 30}{linesep}')
-        print(info)
+        x_axes.append(new_dates[-len(forecast):])
+        y_axes.append(forecast)
+        names.append(f"{forecaster.description}")
 
-        # Plot the raw data
-        raw = np.concatenate(periods, 0)
-        ax.plot(dates[:len(raw)], raw, linestyle='-', alpha=alpha, c='b')
-        names.append(f"{asset_symbol}: {asset_meta_data['name']}")
 
-        # Plot the smoothed data
-        ax.plot(dates[:len(smoothed)], smoothed, linestyle='-', alpha=alpha, c='r')
-        names.append(f"{asset_symbol}: Smoothed")
+    # Plot all forecasts
+    plotting_params = {
+        'legend': names,
+    }
+    _plot_2d_lines(x_axes=x_axes, y_axes=y_axes, plotting_params=plotting_params,
+                   figure=figure, show=False)
 
-        # Add the dates for the final forecast period
-        new_dates = [(dates[-1] + timedelta(days=1)), ]
-        for f in range((len(forecasts[-1]) - 1)):
-            new_dates.append((new_dates[-1] + timedelta(days=1)))
+    if show:
+        figure.show()
 
-        dates.extend(new_dates)
-
-        # Plot all forecasts
-        for f, forecast in enumerate(forecasts):
-            ax.plot(dates[((f + 1) * len(periods[0])):((f + 1) * len(periods[0]) +
-                                                       len(forecast))],
-                    forecast,
-                    linestyle=linestyles[(f % len(linestyles))],
-                    marker=markers[(f % len(markers))], linewidth=linewidth,
-                    markersize=markersize)
-            names.append(
-                f"Forecast Period {f}"
-            )
-
-        ax.set_ylabel('Price [USD]')
-        ax.set_xlabel('Date')
-        ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
-        fig.autofmt_xdate()
-        plt.legend(names)
-        plt.ylim(((np.min(raw)), np.max(raw)))
-
-        if save_plot_path is not None:
-            if not save_plot_path.endswith('.pdf'):
-                save_plot_path += '.pdf'
-
-            plt.savefig(fname=os.path.join(save_plot_path),
-                        dpi=300, orientation='landscape', format='pdf')
-
-        if save_report_path is not None:
-            if not save_report_path.endswith('.txt'):
-                save_report_path += '.txt'
-
-            start_date = dates[0]
-            end_date = dates[-1]
-            with open(save_report_path, 'w') as report_file:
-                report_file.write(f"Asset report from {start_date} - {end_date}\n\n")
-                report_file.write(info)
-
-        plt.show()

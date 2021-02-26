@@ -346,11 +346,7 @@ def _load_multiple_assets(
                                                     quote_channels=quote_channels,
                                                     adjust_prices=adjust_prices)
 
-                except ValueError:
-                    print(f"Could not load the data for {symbol}")
-                    continue
-
-                except KeyError:
+                except:
                     print(f"Could not load the data for {symbol}")
                     continue
 
@@ -370,10 +366,7 @@ def _load_multiple_assets(
                 quotes.append(quote)
                 macros.append(macro)
 
-            except ValueError:
-                print(f"Could not load the data for {symbol}")
-
-            except KeyError:
+            except:
                 print(f"Could not load the data for {symbol}")
 
     # Concatenate the quotes NumPy arrays

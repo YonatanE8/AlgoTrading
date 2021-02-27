@@ -17,10 +17,10 @@ adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
-    'fiveYearAvgDividendYield': (1., 10.),
-    'trailing_price2earnings': (5., 35.),
+    'five_years_div_yield': (0.75, 10.),
+    'trailing_price2earnings': (5., 40.),
     'book2value_ratio': (0.5, 30.),
-    'high_52w': (1.2, 1.5),
+    'high_52w': (1.2, 2.),
 }
 quote_criterions = {
     'sr': (2., 4.),

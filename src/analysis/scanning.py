@@ -209,16 +209,18 @@ class Scanner(ABC):
                     return False
 
             elif not isinstance(asset_macro[criterion], str):
-                if (
+                if (criterion not in asset_macro or
                         criterion in relative_fields and
-                        (asset_macro[criterion] / current_price) < self.macro_criterions[criterion][0] or
-                        (asset_macro[criterion] / current_price) > self.macro_criterions[criterion][1]
+                        ((asset_macro[criterion] / current_price) < self.macro_criterions[criterion][0] or
+                         (asset_macro[criterion] / current_price) > self.macro_criterions[criterion][1])
                 ):
                     return False
 
                 elif (criterion not in asset_macro or
-                      asset_macro[criterion] < self.macro_criterions[criterion][0] or
-                      asset_macro[criterion] > self.macro_criterions[criterion][1]):
+                      (criterion not in relative_fields and
+                       (asset_macro[criterion] < self.macro_criterions[criterion][0] or
+                        asset_macro[criterion] > self.macro_criterions[criterion][1]))
+                ):
                     return False
 
         return True
@@ -271,7 +273,7 @@ class Scanner(ABC):
 
         return True
 
-    def scan_for_potential_assets(self) -> List[str]:
+    def scan_for_potential_assets(self) -> (List[str], List[dict]):
         """
         The main method to be used by a user in the Scanner class. After all macro &
         quotes criterions have been specified, scan all assets given in construction
@@ -289,6 +291,7 @@ class Scanner(ABC):
             quotes_analysis = None
 
         symbols = []
+        macros = []
         for i, symbol in enumerate(self.symbols_list):
             macro = self.macros[i]
             quotes_criterions = {key: quotes_analysis[key][:, i]
@@ -304,5 +307,6 @@ class Scanner(ABC):
 
             if quote_criterion and macro_criterion:
                 symbols.append(symbol)
+                macros.append(macro)
 
-        return symbols
+        return symbols, macros

@@ -55,12 +55,12 @@ class Analyzer(ABC):
         self.trend_period_length = trend_period_length
 
         # Query assets
-        quotes, _ = get_multiple_assets(symbols_list=symbols_list,
-                                        start_date=start_date,
-                                        end_date=end_date,
-                                        quote_channels=(quote_channel,),
-                                        adjust_prices=adjust_prices,
-                                        cache_path=cache_path)
+        quotes, _, _ = get_multiple_assets(symbols_list=symbols_list,
+                                           start_date=start_date,
+                                           end_date=end_date,
+                                           quote_channels=(quote_channel,),
+                                           adjust_prices=adjust_prices,
+                                           cache_path=cache_path)
         self.quotes = quotes[quote_channel]
         self.returns = self._compute_returns(self.quotes)
 

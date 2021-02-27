@@ -354,6 +354,7 @@ def _load_multiple_assets(
         cache_path = os.path.join(cache_path, 'single_assets')
         os.makedirs(cache_path, exist_ok=True)
 
+    loaded_symbols = []
     for symbol in symbols_list:
         print(f"Loading data for {symbol}")
 
@@ -377,6 +378,7 @@ def _load_multiple_assets(
 
                 quotes.append(quote)
                 macros.append(macro)
+                loaded_symbols.append(symbol)
 
             else:
                 try:
@@ -394,6 +396,7 @@ def _load_multiple_assets(
 
                 quotes.append(quote)
                 macros.append(macro)
+                loaded_symbols.append(symbol)
 
         else:
             try:
@@ -404,6 +407,7 @@ def _load_multiple_assets(
 
                 quotes.append(quote)
                 macros.append(macro)
+                loaded_symbols.append(symbol)
 
             except:
                 print(f"Could not load the data for {symbol}")
@@ -419,7 +423,7 @@ def _load_multiple_assets(
         for channel in quote_channels if channel != 'Dates'
     }
     quotes['Dates'] = dates
-    valid_symbols = [symbols_list[i] for i in valid_assets]
+    valid_symbols = [loaded_symbols[i] for i in valid_assets]
     macros = [macros[i] for i in valid_assets]
 
     return quotes, macros, valid_symbols

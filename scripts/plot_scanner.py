@@ -21,7 +21,8 @@ macro_criterions = {
     'five_years_div_yield': (2., 10.),
     'trailing_price2earnings': (5., 35.),
     'book2value_ratio': (0.5, 35.),
-    'high_52w': (1.3, 2.),
+    'high_52w': (1.2, 1.5),
+    'low_52w': (0.7, 0.9),
 }
 quote_criterions = {
     'sr': (2., 4.),

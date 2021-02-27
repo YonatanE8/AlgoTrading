@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List
+from typing import List, Tuple
 from src.analysis.smoothing import Smoother
 from src.analysis.analyzing import Analyzer
 from src.stocks_io.data_queries import get_multiple_assets
@@ -273,7 +273,7 @@ class Scanner(ABC):
 
         return True
 
-    def scan_for_potential_assets(self) -> (List[str], List[dict]):
+    def scan_for_potential_assets(self) -> List[Tuple[int, str]]:
         """
         The main method to be used by a user in the Scanner class. After all macro &
         quotes criterions have been specified, scan all assets given in construction
@@ -291,7 +291,6 @@ class Scanner(ABC):
             quotes_analysis = None
 
         symbols = []
-        macros = []
         for i, symbol in enumerate(self.symbols_list):
             macro = self.macros[i]
             quotes_criterions = {key: quotes_analysis[key][:, i]
@@ -306,7 +305,6 @@ class Scanner(ABC):
                 if quotes_criterions is not None else True
 
             if quote_criterion and macro_criterion:
-                symbols.append(symbol)
-                macros.append(macro)
+                symbols.append((i, symbol))
 
-        return symbols, macros
+        return symbols

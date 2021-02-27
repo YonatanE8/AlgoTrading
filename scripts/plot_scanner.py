@@ -49,13 +49,15 @@ scanner = Scanner(
 scanner.set_macro_criterions(macro_criterions)
 # scanner.set_quote_criterions(quote_criterions)
 
-potential_assets, potential_macros = scanner.scan_for_potential_assets()
-
+potential_assets = scanner.scan_for_potential_assets()
 assert len(potential_assets)
 
+potential_quotes = [scanner.quotes[:, i] for i, _ in potential_assets]
+potential_macros = [scanner.macros[i] for i, _ in potential_assets]
+potential_symbols = tuple([f"{sym}: {scanner.macros[i]['name']}" for i, sym in potential_assets])
 plot_assets_list(
-    assets_symbols=tuple([f"{sym}: {potential_macros[i]['name']}" for i, sym in enumerate(potential_assets)]),
-    assets_data=[scanner.quotes[:, i] for i in range(len(potential_assets))],
+    assets_symbols=potential_symbols,
+    assets_data=potential_quotes,
     dates=scanner.dates,
     assets_meta_data=potential_macros,
 )

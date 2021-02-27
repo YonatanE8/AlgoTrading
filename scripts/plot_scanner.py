@@ -40,6 +40,8 @@ scanner.set_quote_criterions(quote_criterions)
 
 potential_assets = scanner.scan_for_potential_assets()
 
+assert len(potential_assets)
+
 quotes, macros = get_multiple_assets(
     symbols_list=potential_assets,
     start_date=start_date,

@@ -320,7 +320,7 @@ def _load_multiple_assets(
         quote_channels: (str, ...) = ('Adj Close', ...),
         adjust_prices: bool = True,
         cache_path: str = None,
-) -> (dict, [dict, ...]):
+) -> (dict, [dict, ...], list):
     """
     A utility method for loading  N multiple assets,
     used by the get_multiple_assets method.
@@ -419,14 +419,15 @@ def _load_multiple_assets(
         for channel in quote_channels if channel != 'Dates'
     }
     quotes['Dates'] = dates
+    valid_symbols = [symbols_list[i] for i in valid_assets]
 
-    return quotes, macros
+    return quotes, macros, valid_symbols
 
 
 def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str = None,
                         quote_channels: (str, ...) = ('Adj Close', ...),
                         adjust_prices: bool = True,
-                        cache_path: str = None) -> (dict, [dict, ...]):
+                        cache_path: str = None) -> (dict, [dict, ...], list):
     """
     A method for querying N multiple assets and caching them if required.
     Wraps around the 'get_asset_data' method.
@@ -471,10 +472,11 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
         if os.path.isfile(data_file):
             with open(data_file, 'rb') as f:
                 cached_data = pickle.load(f)
-                quotes, macros = cached_data['quotes'], cached_data['macros']
+                quotes, macros, valid_symbols = \
+                    cached_data['quotes'], cached_data['macros'], cached_data['valid_symbols']
 
         else:
-            quotes, macros = _load_multiple_assets(
+            quotes, macros, valid_symbols = _load_multiple_assets(
                 symbols_list=symbols_list,
                 start_date=start_date,
                 end_date=end_date,
@@ -484,10 +486,10 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
             )
 
             with open(data_file, 'wb') as f:
-                pickle.dump(obj={'quotes': quotes, 'macros': macros}, file=f)
+                pickle.dump(obj={'quotes': quotes, 'macros': macros, "valid_symbols": valid_symbols}, file=f)
 
     else:
-        quotes, macros = _load_multiple_assets(
+        quotes, macros, valid_symbols = _load_multiple_assets(
             symbols_list=symbols_list,
             start_date=start_date,
             end_date=end_date,
@@ -495,4 +497,4 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
             adjust_prices=adjust_prices,
         )
 
-    return quotes, macros
+    return quotes, macros, valid_symbols

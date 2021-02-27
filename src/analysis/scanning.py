@@ -36,19 +36,20 @@ class Scanner(ABC):
         cached data, if None does not use caching. Default is None.
         """
 
-        self.symbols_list = symbols_list
         self.start_date = start_date
         self.quote_channel = quote_channel
         self.adjust_prices = adjust_prices
         self.cache_path = cache_path
         self._analyzer = analyzer
 
-        quotes, self.macros = get_multiple_assets(symbols_list=symbols_list,
-                                                  start_date=start_date,
-                                                  end_date=end_date,
-                                                  quote_channels=(quote_channel,),
-                                                  adjust_prices=adjust_prices,
-                                                  cache_path=cache_path)
+        quotes, self.macros, self.symbols_list = get_multiple_assets(
+            symbols_list=symbols_list,
+            start_date=start_date,
+            end_date=end_date,
+            quote_channels=(quote_channel,),
+            adjust_prices=adjust_prices,
+            cache_path=cache_path,
+        )
 
         self.quotes = quotes[quote_channel]
         self._smoother = smoother
@@ -198,16 +199,17 @@ class Scanner(ABC):
             "'high_52w' or 'low_52w' are specified in self.macro_criterions"
 
         for criterion in self.macro_criterions:
-            if asset_macro[criterion] is None:
+            if criterion not in asset_macro or asset_macro[criterion] is None:
                 if not ignore_none:
                     return None
 
             elif isinstance(asset_macro[criterion], str):
-                if asset_macro[criterion] not in self.macro_criterions[criterion]:
+                if criterion not in asset_macro or asset_macro[criterion] not in self.macro_criterions[criterion]:
                     return False
 
             elif not isinstance(asset_macro[criterion], str):
-                if (asset_macro[criterion] < self.macro_criterions[criterion][0] or
+                if (criterion not in asset_macro or
+                        asset_macro[criterion] < self.macro_criterions[criterion][0] or
                         asset_macro[criterion] > self.macro_criterions[criterion][
                             1]):
                     return False
@@ -297,4 +299,3 @@ class Scanner(ABC):
                 symbols.append(symbol)
 
         return symbols
-

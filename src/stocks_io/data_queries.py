@@ -49,6 +49,45 @@ def get_sp500_symbols_wiki(
     return symbols, names
 
 
+def get_nasdaq100_symbols_wiki(
+        url: str = r'https://en.wikipedia.org/wiki/Nasdaq-100',
+        headers: Dict[str, str] = None) -> (list, list):
+    """
+    A method for getting the symbols of assets currently included as part
+    of the NASDAQ 100 index.
+
+    :param url: (str) Wiki url to query the symbols from. Defaults to
+    ''https://en.wikipedia.org/wiki/Nasdaq-100'.
+    :param headers: (dict) Defines the User-Agent for querying the website.
+    Defaults to None, in which it then takes the value of:
+    {'User-Agent': 'Mozilla/5.0 (X11; Linux i686)'
+                   ' AppleWebKit/537.17 (KHTML, like Gecko)'
+                   ' Chrome/24.0.1312.27 Safari/537.17'}
+
+    :return: (list, list) A list of symbols of stocks currently included
+    in the NASDAQ 100 index index, and a list of the companies names ordered similarly
+    to the list of symbols.
+    """
+
+    if headers is None:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux i686)'
+                          ' AppleWebKit/537.17 (KHTML, like Gecko)'
+                          ' Chrome/24.0.1312.27 Safari/537.17'
+        }
+
+    # Query the list of companies included in the S&P 500 index from Wikipedia
+    resp = requests.get(url, headers=headers)
+    soup = bs.BeautifulSoup(resp.text, 'lxml')
+    table = soup.findAll('table', {'class': 'wikitable sortable'})
+    table = table[2]
+    tables_rows = table.findAll('tr')[1:]
+    symbols = [row.findAll('td')[1].text.strip() for row in tables_rows]
+    names = [row.findAll('td')[0].text.strip() for row in tables_rows]
+
+    return symbols, names
+
+
 def get_nasdaq_listed_symbols(
         url: str = r"http://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
         headers: Dict[str, str] = None) -> (list, list):
@@ -370,9 +409,13 @@ def _load_multiple_assets(
                 print(f"Could not load the data for {symbol}")
 
     # Concatenate the quotes NumPy arrays
-    dates = quotes[0]['Dates']
+    dates = [len(q['Dates']) for q in quotes]
+    valid_dates_len = int(np.median(dates))
+    valid_assets = [i for i, q in enumerate(quotes) if len(q['Dates']) >= valid_dates_len]
+    dates = quotes[valid_assets[0]]['Dates'][-valid_dates_len:]
+
     quotes = {
-        channel: np.concatenate([np.expand_dims(q[channel], 1) for q in quotes], 1)
+        channel: np.concatenate([np.expand_dims(quotes[i][channel][-valid_dates_len:], 1) for i in valid_assets], 1)
         for channel in quote_channels if channel != 'Dates'
     }
     quotes['Dates'] = dates

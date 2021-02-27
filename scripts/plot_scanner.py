@@ -1,13 +1,13 @@
 from src import PROJECT_ROOT
 from src.analysis.scanning import Scanner
 from src.visualizations.plot_assets import plot_assets_list
-from src.stocks_io.data_queries import get_sp500_symbols_wiki, get_nasdaq_listed_symbols, get_multiple_assets
+from src.stocks_io.data_queries import get_sp500_symbols_wiki, get_nasdaq100_symbols_wiki, get_multiple_assets
 
 import os
 
 # Define data parameters
 sp500_symbols, sp500_names = get_sp500_symbols_wiki()
-nasdaq100_symbols, nasdaq100_names = get_nasdaq_listed_symbols()
+nasdaq100_symbols, nasdaq100_names = get_nasdaq100_symbols_wiki()
 
 symbols_list = tuple(sp500_symbols + nasdaq100_symbols)
 start_date = "2016-02-25"

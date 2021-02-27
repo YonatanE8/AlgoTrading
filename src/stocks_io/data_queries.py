@@ -420,7 +420,7 @@ def _load_multiple_assets(
     }
     quotes['Dates'] = dates
     valid_symbols = [symbols_list[i] for i in valid_assets]
-    macros = [macros[i] for i in valid_symbols]
+    macros = [macros[i] for i in valid_assets]
 
     return quotes, macros, valid_symbols
 

@@ -51,6 +51,7 @@ class Scanner(ABC):
             cache_path=cache_path,
         )
 
+        self.dates = quotes['Dates']
         self.quotes = quotes[quote_channel]
         self._smoother = smoother
 

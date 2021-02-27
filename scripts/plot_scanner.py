@@ -19,12 +19,12 @@ cache_path = os.path.join(PROJECT_ROOT, 'data')
 macro_criterions = {
     'five_years_div_yield': (0.75, 10.),
     'trailing_price2earnings': (5., 40.),
-    'book2value_ratio': (0.5, 30.),
-    'high_52w': (1.2, 2.),
+    # 'book2value_ratio': (0.5, 40.),
+    'high_52w': (1.15, 2.),
 }
-quote_criterions = {
-    'sr': (2., 4.),
-}
+# quote_criterions = {
+#     'sr': (2., 4.),
+# }
 
 scanner = Scanner(
     symbols_list=symbols_list,
@@ -35,23 +35,16 @@ scanner = Scanner(
     cache_path=cache_path,
 )
 
-scanner.set_macro_criterions(macro_criterions)
-scanner.set_quote_criterions(quote_criterions)
+# scanner.set_macro_criterions(macro_criterions)
+# scanner.set_quote_criterions(quote_criterions)
 
 potential_assets = scanner.scan_for_potential_assets()
 
 assert len(potential_assets)
 
-quotes, macros = get_multiple_assets(
-    symbols_list=potential_assets,
-    start_date=start_date,
-    end_date=end_date,
-    cache_path=cache_path,
-)
-
 plot_assets_list(
     assets_symbols=tuple(potential_assets),
-    assets_data=quotes,
-    dates=quotes['Dates'],
-    assets_meta_data=macros,
+    assets_data=[scanner.quotes[:, i] for i in range(len(potential_assets))],
+    dates=scanner.dates,
+    assets_meta_data=scanner.macros,
 )

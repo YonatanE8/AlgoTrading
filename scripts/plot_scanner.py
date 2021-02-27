@@ -17,14 +17,14 @@ adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
-    'five_years_div_yield': (0.75, 10.),
-    'trailing_price2earnings': (5., 40.),
-    # 'book2value_ratio': (0.5, 40.),
-    'high_52w': (1.15, 2.),
+    'five_years_div_yield': (1., 10.),
+    'trailing_price2earnings': (5., 35.),
+    'book2value_ratio': (0.5, 35.),
+    'high_52w': (1., 2.),
 }
-# quote_criterions = {
-#     'sr': (2., 4.),
-# }
+quote_criterions = {
+    'sr': (2., 4.),
+}
 
 scanner = Scanner(
     symbols_list=symbols_list,
@@ -35,7 +35,7 @@ scanner = Scanner(
     cache_path=cache_path,
 )
 
-# scanner.set_macro_criterions(macro_criterions)
+scanner.set_macro_criterions(macro_criterions)
 # scanner.set_quote_criterions(quote_criterions)
 
 potential_assets = scanner.scan_for_potential_assets()

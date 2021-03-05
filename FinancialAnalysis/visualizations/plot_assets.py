@@ -1,8 +1,8 @@
 from os import linesep
 from typing import Sequence, Dict, Tuple
 from datetime import datetime, timedelta
-from src.analysis.smoothing import Smoother
-from src.analysis.forecasting import Forecaster
+from FinancialAnalysis.analysis.smoothing import Smoother
+from FinancialAnalysis.analysis.forecasting import Forecaster
 
 import numpy as np
 import plotly.graph_objs as go

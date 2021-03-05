@@ -1,5 +1,5 @@
 from abc import ABC
-from src.analysis.smoothing import Smoother
+from FinancialAnalysis.analysis.smoothing import Smoother
 from statsmodels.tsa.arima_model import ARIMA
 
 import numpy as np

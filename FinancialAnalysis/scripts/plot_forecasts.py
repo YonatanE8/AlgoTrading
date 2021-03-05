@@ -1,8 +1,8 @@
-from src import PROJECT_ROOT
-from src.stocks_io.data_queries import get_asset_data
-from src.analysis.smoothing import Smoother
-from src.analysis.forecasting import Forecaster
-from src.visualizations.plot_assets import plot_forecasts
+from FinancialAnalysis import PROJECT_ROOT
+from FinancialAnalysis.analysis.smoothing import Smoother
+from FinancialAnalysis.analysis.forecasting import Forecaster
+from FinancialAnalysis.stocks_io.data_queries import get_asset_data
+from FinancialAnalysis.visualizations.plot_assets import plot_forecasts
 
 import os
 import plotly.graph_objs as go

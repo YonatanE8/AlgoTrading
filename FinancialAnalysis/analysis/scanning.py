@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import List, Tuple
-from src.analysis.smoothing import Smoother
-from src.analysis.analyzing import Analyzer
-from src.stocks_io.data_queries import get_multiple_assets
+from FinancialAnalysis.analysis.smoothing import Smoother
+from FinancialAnalysis.analysis.analyzing import Analyzer
+from FinancialAnalysis.stocks_io.data_queries import get_multiple_assets
 
 
 class Scanner(ABC):
@@ -77,7 +77,7 @@ class Scanner(ABC):
 
         self._viable_quote_criterions = [
             'sr', 'mean', 'recent_trend_mean', 'recent_trend_std',
-            'overall_period_return',
+            'overall_period_return', 'linear_regression_fit',
         ]
         self.quote_criterions = {}
 
@@ -205,14 +205,17 @@ class Scanner(ABC):
                     return None
 
             elif isinstance(asset_macro[criterion], str):
-                if criterion not in asset_macro or asset_macro[criterion] not in self.macro_criterions[criterion]:
+                if criterion not in asset_macro or asset_macro[criterion] not in \
+                        self.macro_criterions[criterion]:
                     return False
 
             elif not isinstance(asset_macro[criterion], str):
                 if (criterion not in asset_macro or
                         criterion in relative_fields and
-                        ((asset_macro[criterion] / current_price) < self.macro_criterions[criterion][0] or
-                         (asset_macro[criterion] / current_price) > self.macro_criterions[criterion][1])
+                        ((asset_macro[criterion] / current_price) <
+                         self.macro_criterions[criterion][0] or
+                         (asset_macro[criterion] / current_price) >
+                         self.macro_criterions[criterion][1])
                 ):
                     return False
 
@@ -266,9 +269,32 @@ class Scanner(ABC):
         """
 
         for criterion in self.quote_criterions:
-            if (asset_quote_stats[criterion] < self.quote_criterions[criterion][0] or
-                    asset_quote_stats[criterion] > self.quote_criterions[criterion][
-                        1]):
+            if criterion == 'linear_regression_fit':
+                assert len(self.quote_criterions[criterion]) == 3
+
+                slope = asset_quote_stats[criterion][0]
+                intercept = asset_quote_stats[criterion][1]
+                r_sq = asset_quote_stats[criterion][2]
+
+                slope_criterion = self.quote_criterions[criterion][0]
+                intercept_criterion = self.quote_criterions[criterion][1]
+                r_sq_criterion = self.quote_criterions[criterion][2]
+
+                cond = True
+                if slope_criterion is not None and slope < slope_criterion:
+                    cond = False
+
+                if intercept_criterion is not None and intercept < intercept_criterion:
+                    cond = False
+
+                if r_sq_criterion is not None and r_sq < r_sq_criterion:
+                    cond = False
+
+                return cond
+
+            elif (asset_quote_stats[criterion] < self.quote_criterions[criterion][0] or
+                  asset_quote_stats[criterion] > self.quote_criterions[criterion][
+                      1]):
                 return False
 
         return True

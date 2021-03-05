@@ -1,6 +1,10 @@
 from abc import ABC
+from typing import Tuple
+
 from scipy.signal import welch
-from src.stocks_io.data_queries import get_asset_data, get_multiple_assets
+from scipy.stats import linregress
+from scipy.interpolate import interp1d
+from FinancialAnalysis.stocks_io.data_queries import get_asset_data, get_multiple_assets
 
 import numpy as np
 
@@ -95,6 +99,34 @@ class Analyzer(ABC):
 
         return returns
 
+    @staticmethod
+    def _interpoloate(
+            x_axis: np.ndarray,
+            y: np.ndarray,
+            mode: str = 'previous') -> np.ndarray:
+        """
+        A utility method for performing interpolation, especially useful for computing
+        the Sharpe-Ratio when the # of quotes for the risk-free asset is not complete.
+        This method is wrapper around SciPy's interp1d method.
+
+        :param x_axis: (np.ndarray) The x-axis to interpolate over
+        :param y: (np.ndarray) The signal to interpolate
+        :param mode: (str) The interpolation method.
+
+        :return: (np.ndarray) The interpolated signal
+        """
+
+        x = np.linspace(0, x_axis[-1], num=(len(y)))
+        interpolator = interp1d(
+            x,
+            y,
+            kind=mode,
+            fill_value="extrapolate",
+        )
+        interpolated_signal = interpolator(x_axis)
+
+        return interpolated_signal
+
     def _analyze_sr(self) -> np.ndarray:
         """
         Utility method for computing the assets Sharpe-Ratio
@@ -104,7 +136,16 @@ class Analyzer(ABC):
         """
 
         # Compute the excess returns and standard-deviation of the excess returns
-        excess_returns = self.returns - np.expand_dims(self.risk_free_returns, 1)
+        if len(self.risk_free_returns) != self.returns.shape[0]:
+            risk_free_returns = self._interpoloate(
+                x_axis=np.arange(self.returns.shape[0]),
+                y=self.risk_free_returns,
+            )
+
+        else:
+            risk_free_returns = self.risk_free_returns
+
+        excess_returns = self.returns - np.expand_dims(risk_free_returns, 1)
 
         # Sum excess returns over temporal intervals
         cumsum_excess_returns = np.cumsum(excess_returns, axis=0)
@@ -171,7 +212,7 @@ class Analyzer(ABC):
     @property
     def mean_annual_return(self) -> np.ndarray:
         """
-        Class property, denoting the mean annual return of each asset, where the
+        Denotes the mean annual return of each asset, where the
         mean annual return is computed as the mean return over the entire
         requested period, multiplied by 255 (trading days per year on avg.)
 
@@ -362,6 +403,30 @@ class Analyzer(ABC):
 
         return self._compute_overall_period_return()
 
+    def linear_regression_fit(self) -> np.ndarray:
+        """
+        A utility method which returns the slope, intercept and the R^2 values from
+        performing a linear regression fit across the latest 'trend_period_length'
+        trading periods.
+
+        :return: A numpy array of shape (N, 3), containing the slope,
+        intercept and the R^2 values of each one of the N asset, in that order.
+        """
+
+        x = np.arange(self.trend_period_length)
+        results = [
+            linregress(x, self.quotes[-self.trend_period_length:, i])
+            for i in range(self.quotes.shape[1])
+        ]
+        results = np.concatenate(
+            [
+                np.expand_dims(np.array([res.slope, res.intercept, res.rvalue ** 2]), 0)
+                for res in results
+            ], 0
+        )
+
+        return results
+
     def analyze(self, quotes: np.ndarray = None) -> dict:
         """
         The main method to use in the Analyzer class. It runs all currently available
@@ -394,6 +459,7 @@ class Analyzer(ABC):
         periodicity = self._analyze_periodicty(quotes=quotes)
         mean_annual_returns = self.mean_annual_return
         trend_mean, trend_std = self._returns_emerging_trend(quotes=quotes)
+        linear_regression_fit = self.linear_regression_fit()
 
         analysis = {
             'sr': sr,
@@ -401,6 +467,7 @@ class Analyzer(ABC):
             'recent_trend_mean': trend_mean,
             'recent_trend_std': trend_std,
             'periodicity': periodicity,
+            'linear_regression_fit': linear_regression_fit,
         }
 
         return analysis

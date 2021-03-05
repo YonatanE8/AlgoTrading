@@ -1,6 +1,6 @@
-from src import PROJECT_ROOT
-from src.stocks_io.data_queries import get_multiple_assets
-from src.visualizations.plot_assets import plot_assets_list
+from FinancialAnalysis import PROJECT_ROOT
+from FinancialAnalysis.stocks_io.data_queries import get_multiple_assets
+from FinancialAnalysis.visualizations.plot_assets import plot_assets_list
 
 import os
 

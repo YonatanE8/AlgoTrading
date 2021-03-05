@@ -1,8 +1,11 @@
 from analysis.analyzing import Analyzer
-from src import PROJECT_ROOT
-from src.analysis.scanning import Scanner
-from src.visualizations.plot_assets import plot_assets_list
-from src.stocks_io.data_queries import get_sp500_symbols_wiki, get_nasdaq100_symbols_wiki
+from FinancialAnalysis import PROJECT_ROOT
+from FinancialAnalysis.analysis.scanning import Scanner
+from FinancialAnalysis.visualizations.plot_assets import plot_assets_list
+from FinancialAnalysis.stocks_io.data_queries import (
+    get_sp500_symbols_wiki,
+    get_nasdaq100_symbols_wiki,
+)
 
 import os
 
@@ -18,24 +21,25 @@ adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
-    'five_years_div_yield': (2., 10.),
-    'trailing_price2earnings': (5., 35.),
-    'book2value_ratio': (0.5, 35.),
-    'high_52w': (1.2, 1.5),
-    'low_52w': (0.7, 0.9),
+    # 'five_years_div_yield': (2., 10.),
+    'trailing_price2earnings': (5., 40.),
+    'book2value_ratio': (0.5, 40.),
+    # 'high_52w': (1.2, 1.5),
+    # 'low_52w': (0.7, 0.9),
 }
 quote_criterions = {
-    'sr': (2., 4.),
+    # 'sr': (2., 4.),
+    'linear_regression_fit': (None, None, 0.7)
 }
 
-# analyzer = Analyzer(
-#     symbols_list=symbols_list,
-#     start_date=start_date,
-#     end_date=end_date,
-#     quote_channel=quote_channel,
-#     adjust_prices=adjust_prices,
-#     cache_path=cache_path,
-# )
+analyzer = Analyzer(
+    symbols_list=symbols_list,
+    start_date=start_date,
+    end_date=end_date,
+    quote_channel=quote_channel,
+    adjust_prices=adjust_prices,
+    cache_path=cache_path,
+)
 scanner = Scanner(
     symbols_list=symbols_list,
     start_date=start_date,
@@ -43,11 +47,11 @@ scanner = Scanner(
     quote_channel=quote_channel,
     adjust_prices=adjust_prices,
     cache_path=cache_path,
-    # analyzer=analyzer,
+    analyzer=analyzer,
 )
 
 scanner.set_macro_criterions(macro_criterions)
-# scanner.set_quote_criterions(quote_criterions)
+scanner.set_quote_criterions(quote_criterions)
 
 potential_assets = scanner.scan_for_potential_assets()
 assert len(potential_assets)

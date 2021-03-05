@@ -17,7 +17,7 @@ class Analyzer(ABC):
     def __init__(self, symbols_list: tuple, start_date: str, end_date: str = None,
                  quote_channel: str = 'Close', adjust_prices: bool = True,
                  risk_free_asset_symbol: str = '^IRX', bins: int = 10,
-                 spectral_energy_threshold: float = 0.2, trend_period_length: int = 22,
+                 spectral_energy_threshold: float = 0.05, trend_period_length: int = 22,
                  cache_path: str = None):
         """
         Constructor method for the Analyzer class
@@ -47,8 +47,6 @@ class Analyzer(ABC):
         """
 
         # Setup
-        self.n_assets = len(symbols_list)
-        self.symbols_list = symbols_list
         self.start_date = start_date
         self.end_date = end_date
         self.quote_channel = quote_channel
@@ -59,13 +57,33 @@ class Analyzer(ABC):
         self.trend_period_length = trend_period_length
 
         # Query assets
-        quotes, _, _ = get_multiple_assets(symbols_list=symbols_list,
-                                           start_date=start_date,
-                                           end_date=end_date,
-                                           quote_channels=(quote_channel,),
-                                           adjust_prices=adjust_prices,
-                                           cache_path=cache_path)
-        self.quotes = quotes[quote_channel]
+        quotes, _, valid_symbols = get_multiple_assets(
+            symbols_list=symbols_list,
+            start_date=start_date,
+            end_date=end_date,
+            quote_channels=(quote_channel,),
+            adjust_prices=adjust_prices,
+            cache_path=cache_path,
+        )
+        quotes = quotes[quote_channel]
+
+        # Interpolate over any NaNs
+        x_axis = np.arange(quotes.shape[0])
+        interpolated_quotes = [
+            self._interpoloate(
+                x_axis=x_axis,
+                y=quotes[:, i],
+            )
+            for i in range(quotes.shape[1])
+        ]
+        interpolated_quotes = np.concatenate(
+            [np.expand_dims(q, 0) for q in interpolated_quotes],
+            0
+        )
+
+        self.n_assets = len(valid_symbols)
+        self.symbols_list = valid_symbols
+        self.quotes = interpolated_quotes
         self.returns = self._compute_returns(self.quotes)
 
         # Query the risk free asset
@@ -232,12 +250,18 @@ class Analyzer(ABC):
         :return: None
         """
 
+        assert not any(np.isnan(quotes).reshape(-1)), \
+            "Detected NaNs in the 'quotes', please check the inputs."
+
         # Compute power spectrum and get spectral components
         frequencies, power_spectrum = welch(quotes, fs=1.0, window='hann',
                                             return_onesided=True, scaling='density',
                                             axis=0)
         total_energy = np.sum(power_spectrum, axis=0)
         normalized_power_spectrum = power_spectrum / np.expand_dims(total_energy, 0)
+
+        assert not any(np.isnan(normalized_power_spectrum).reshape(-1)), \
+            "Detected NaNs in the 'normalized_power_spectrum', please check the inputs."
 
         spectral_components = [
             np.where(normalized_power_spectrum[:, i] >
@@ -252,6 +276,13 @@ class Analyzer(ABC):
             normalized_power_spectrum[component, i]
             for i, component in enumerate(spectral_components) if len(component)
         ]
+
+        assert len(spectral_components_freqs) == self.n_assets, \
+            "Spectral components were not found for all assets, please try again" \
+            "with a lower 'spectral_energy_threshold'."
+        assert len(spectral_components_energies) == self.n_assets, \
+            "Spectral components were not found for all assets, please try again" \
+            "with a lower 'spectral_energy_threshold'."
 
         self.spectral_components_freqs = spectral_components_freqs
         self.spectral_components_energies = spectral_components_energies

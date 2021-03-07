@@ -319,9 +319,14 @@ class Scanner(ABC):
         symbols = []
         for i, symbol in enumerate(self.symbols_list):
             macro = self.macros[i]
-            quotes_criterions = {key: quotes_analysis[key][:, i]
-                                 for key in quotes_analysis} \
-                if quotes_analysis is not None else None
+            quotes_criterions = (
+                {
+                    key: quotes_analysis[key][i]
+                    for key in quotes_analysis
+                }
+                if quotes_analysis is not None
+                else None
+            )
 
             macro_criterion = self._test_macro_criterion(
                 asset_macro=macro, current_price=self.quotes[-1, i], ignore_none=True)

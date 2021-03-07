@@ -17,8 +17,8 @@ class Analyzer(ABC):
     def __init__(self, symbols_list: tuple, start_date: str, end_date: str = None,
                  quote_channel: str = 'Close', adjust_prices: bool = True,
                  risk_free_asset_symbol: str = '^IRX', bins: int = 10,
-                 spectral_energy_threshold: float = 0.05, trend_period_length: int = 22,
-                 cache_path: str = None):
+                 spectral_energy_threshold: float = 0.001,
+                 trend_period_length: int = 22, cache_path: str = None):
         """
         Constructor method for the Analyzer class
 
@@ -73,6 +73,7 @@ class Analyzer(ABC):
             self._interpoloate(
                 x_axis=x_axis,
                 y=quotes[:, i],
+                mode='previous',
             )
             for i in range(quotes.shape[1])
         ]
@@ -83,7 +84,7 @@ class Analyzer(ABC):
 
         self.n_assets = len(valid_symbols)
         self.symbols_list = valid_symbols
-        self.quotes = interpolated_quotes
+        self.quotes = interpolated_quotes.T
         self.returns = self._compute_returns(self.quotes)
 
         # Query the risk free asset
@@ -96,8 +97,9 @@ class Analyzer(ABC):
 
         # Risk-free asset is already reported as returns, remove the first entry so that
         # the risk-free returns will align with the assets' returns.
-        # We also divide by 100 since the risk-free return is specified in %
-        self.risk_free_returns = self.risk_free_asset[1:] / 100
+        # We divide by 100 since the risk-free return is specified in %,
+        # and divide by 255 in order to take into account the daily risk-free returns
+        self.risk_free_returns = self.risk_free_asset[1:] / (100 * 255)
 
         # Place-holders
         self.spectral_components = None
@@ -134,10 +136,21 @@ class Analyzer(ABC):
         :return: (np.ndarray) The interpolated signal
         """
 
-        x = np.linspace(0, x_axis[-1], num=(len(y)))
+        # Start by removing the NaN values from 'y'
+        not_nan_inds = ~np.isnan(y)
+        y_without_nans = y[not_nan_inds]
+
+        if not_nan_inds.shape[0] < x_axis.shape[0]:
+            not_nan_inds = np.append(
+                not_nan_inds,
+                np.array([False] * (x_axis.shape[0] - not_nan_inds.shape[0])),
+                0
+            )
+
+        x = x_axis[not_nan_inds]
         interpolator = interp1d(
             x,
-            y,
+            y_without_nans,
             kind=mode,
             fill_value="extrapolate",
         )
@@ -164,17 +177,12 @@ class Analyzer(ABC):
             risk_free_returns = self.risk_free_returns
 
         excess_returns = self.returns - np.expand_dims(risk_free_returns, 1)
-
-        # Sum excess returns over temporal intervals
-        cumsum_excess_returns = np.cumsum(excess_returns, axis=0)
+        excess_returns = np.cumprod((excess_returns + 1), 0)
 
         # Compute SR
-        n_samples = excess_returns.shape[0]
-        excess_returns_stds = [np.std(cumsum_excess_returns[:i + 1, :],
-                                      axis=0, keepdims=True)
-                               for i in range(1, n_samples)]
-        excess_returns_stds = np.concatenate(excess_returns_stds, axis=0)
-        sr = cumsum_excess_returns[1:] / excess_returns_stds
+        sr_risk = np.std(excess_returns, axis=0)
+        sr_return = excess_returns[-1, :]
+        sr = sr_return / sr_risk
 
         return sr
 
@@ -287,6 +295,7 @@ class Analyzer(ABC):
         self.spectral_components_freqs = spectral_components_freqs
         self.spectral_components_energies = spectral_components_energies
 
+    # TODO: Debug
     def generate_periodic_signal(self, quotes: np.ndarray,
                                  x_axis: np.ndarray) -> np.ndarray:
         """
@@ -326,29 +335,32 @@ class Analyzer(ABC):
         # Compute the offset of the periodic signal as the running mean of the
         # acutal raw signal
         sums = [
-            np.mean(quotes[:(i + 1), :], axis=0, keepdims=True)
+            np.mean(quotes[:, i:(i + self.trend_period_length)],
+                    axis=1,
+                    keepdims=True)
             for i in range(self.trend_period_length - 1)
         ]
         sums.extend(
             [
-                np.mean(quotes[i:(i + (self.trend_period_length)), :], axis=0,
+                np.mean(quotes[:, i:(i + self.trend_period_length)],
+                        axis=1,
                         keepdims=True)
-                for i in range((quotes.shape[0] - self.trend_period_length))
+                for i in range((quotes.shape[1] - self.trend_period_length))
             ]
         )
         sums = np.concatenate(sums, 0)
 
         # Compute the amplitude of the periodic signal as the running std of the
-        # acutal raw signal
+        # actual raw signal
         sums_std = [
-            np.std(quotes[:(i + 1), :], axis=0, keepdims=True)
+            np.std(quotes[:, i:(i + self.trend_period_length)], axis=1, keepdims=True)
             for i in range(self.trend_period_length - 1)
         ]
         sums_std.extend(
             [
                 np.std(quotes[i:(i + (self.trend_period_length)), :], axis=0,
                        keepdims=True)
-                for i in range((quotes.shape[0] - self.trend_period_length))
+                for i in range((quotes.shape[1] - self.trend_period_length))
             ]
         )
         sums_std = np.concatenate(sums_std, 0)
@@ -487,7 +499,10 @@ class Analyzer(ABC):
 
         # Perform analysis
         sr = self.sr
-        periodicity = self._analyze_periodicty(quotes=quotes)
+
+        # TODO: Fix
+        # periodicity = self._analyze_periodicty(quotes=quotes)
+
         mean_annual_returns = self.mean_annual_return
         trend_mean, trend_std = self._returns_emerging_trend(quotes=quotes)
         linear_regression_fit = self.linear_regression_fit()
@@ -497,7 +512,7 @@ class Analyzer(ABC):
             'mean': mean_annual_returns,
             'recent_trend_mean': trend_mean,
             'recent_trend_std': trend_std,
-            'periodicity': periodicity,
+            # 'periodicity': periodicity,
             'linear_regression_fit': linear_regression_fit,
         }
 

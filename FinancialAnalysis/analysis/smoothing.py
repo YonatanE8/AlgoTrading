@@ -21,6 +21,7 @@ class Smoother(ABC):
         'avg': Averaging over a running window,
         'exp': Exponential smoothing,
         'holt_winter': Exponential smoothing using the Holt-Winter method,
+        'polyfit': Polynomial fitting,
         :param length: (int) Used with the 'avg' method. The length of the
          averaging window in days. Default is 5 (i.e. trading week).
         :param alpha: (float) Used with the 'exp' method. The smoothing factor,
@@ -68,7 +69,7 @@ class Smoother(ABC):
 
         # Define the averaging window
         window = (1 / self.length) * np.ones((self.length,))
-        smoothed_time_series = convolve(time_series, window, mode='same',
+        smoothed_time_series = convolve(time_series, window, mode='valid',
                                         method='auto')
 
         return smoothed_time_series

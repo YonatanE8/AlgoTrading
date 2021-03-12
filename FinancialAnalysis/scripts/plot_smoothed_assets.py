@@ -5,19 +5,22 @@ from FinancialAnalysis.visualizations.plot_assets import plot_smooth_assets_list
 
 import os
 
-# symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
-symbols_list = ('MSFT', )
-start_date = "2015-12-03"
-end_date = "2020-12-03"
+symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
+# symbols_list = ('MSFT', )
+start_date = "2016-03-10"
+end_date = "2021-03-10"
 quote_channels = ('Close',)
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
-quotes, macros = get_multiple_assets(symbols_list=symbols_list, start_date=start_date,
-                                     end_date=end_date, quote_channels=quote_channels,
-                                     adjust_prices=adjust_prices, cache_path=cache_path)
+quotes, macros, valid_symbols = get_multiple_assets(
+    symbols_list=symbols_list, start_date=start_date,
+    end_date=end_date, quote_channels=quote_channels,
+    adjust_prices=adjust_prices, cache_path=cache_path,
+)
 
-assets_data = [quotes[quote_channels[0]][:, i]
-               for i in range(quotes[quote_channels[0]].shape[1])]
+assets_data = [
+    quotes[quote_channels[0]][:, i] for i in range(quotes[quote_channels[0]].shape[1])
+]
 dates = quotes['Dates']
 smoothers = [
     Smoother(method='avg', length=15),

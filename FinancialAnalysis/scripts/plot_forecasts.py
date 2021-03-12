@@ -10,7 +10,7 @@ import plotly.graph_objs as go
 # Define data parameters
 # symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
 symbols_list = ('MSFT', )
-start_date = "2021-01-01"
+start_date = "2016-03-10"
 end_date = "2021-03-10"
 quote_channels = ('Close',)
 adjust_prices = True
@@ -20,14 +20,14 @@ cache_path = os.path.join(PROJECT_ROOT, 'data')
 # smoother = Smoother(method='avg', length=5)
 # smoother = Smoother(method='exp', alpha=0.6, optimize=False)
 # smoother = Smoother(method='exp', optimize=True)
-smoother = Smoother(method='holt_winter', trend=None)
-# smoother = Smoother(method='polyfit', poly_degree=2)
+# smoother = Smoother(method='holt_winter', trend=None)
+smoother = Smoother(method='polyfit', poly_degree=3)
 
 # Define Forecaster
 # method = 'arima'
-method = 'sarimax'
-# method = 'smoother'
-forecast_horizon = 2
+# method = 'sarimax'
+method = 'smoother'
+forecast_horizon = 5
 arima_orders = None
 remove_mean = False
 arima_prediction_type = 'levels'
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         )
         asset_data = quotes[quote_channels[0]]
         dates = quotes['Dates']
-        window_len = 20
+        window_len = 66
 
         # Plot forecast
         figure = go.Figure()

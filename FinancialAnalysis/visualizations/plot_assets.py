@@ -259,8 +259,7 @@ def plot_forecasts(
     names = []
     for i in range(n_windows):
         series_to_analyze = time_series[i:(i + window_len)]
-        forecaster.reset_smoother()
-        forecaster._arima_model = None
+        forecaster.reset()
         forecast = forecaster.forecast(series_to_analyze)
 
         x_axes.append(

@@ -24,10 +24,11 @@ smoother = Smoother(method='holt_winter', trend=None)
 # smoother = Smoother(method='polyfit', poly_degree=2)
 
 # Define Forecaster
-method = 'arima'
+# method = 'arima'
+method = 'sarimax'
 # method = 'smoother'
 forecast_horizon = 2
-arima_orders = (2, 0, 1)
+arima_orders = None
 remove_mean = False
 arima_prediction_type = 'levels'
 forecaster = Forecaster(
@@ -40,14 +41,6 @@ forecaster = Forecaster(
 )
 
 # Plotting parameters
-display_meta_paramets = (
-    'five_years_div_yield',
-    'book2value_ratio',
-    'high_52w',
-    'low_52w',
-    'profit_margins',
-    'trailing_price2earnings',
-)
 if __name__ == '__main__':
     for symbol in symbols_list:
         # Get data

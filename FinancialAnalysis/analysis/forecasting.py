@@ -1,6 +1,7 @@
 from abc import ABC
-from FinancialAnalysis.analysis.smoothing import Smoother
 from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from FinancialAnalysis.analysis.smoothing import Smoother
 
 import numpy as np
 
@@ -10,10 +11,15 @@ class Forecaster(ABC):
     Class for managing all forecasting methods for a 1D time series
     """
 
-    def __init__(self, method: str = 'smoother', forecast_horizon: int = 5,
-                 smoother: Smoother = None,
-                 arima_orders: (int, int, int) = (10, 3, 10),
-                 arima_prediction_type: str = 'levels'):
+    def __init__(
+            self,
+            method: str = 'smoother',
+            forecast_horizon: int = 5,
+            smoother: Smoother = None,
+            arima_orders: (int, int, int) = (10, 3, 10),
+            arima_prediction_type: str = 'levels',
+            remove_mean: bool = False
+    ):
         """
         Initialize a Forecaster class for producing future predictions of a time-series.
 
@@ -34,7 +40,10 @@ class Forecaster(ABC):
         ‘linear’ : Linear prediction in terms of the differenced endogenous variables.
         ‘levels’ : Predict the levels of the original endogenous variables.
         Default is 'levels'. For further details please refer to:
-        https://www.statsmodels.org -> statsmodels.tsa.arima_model.ARIMAResults.predict
+        https://www.statsmodels.org -> statsmodels.tsa.arima_model.ARIMAResults.predict.
+        :param remove_mean: (bool) Whether to normalize the data by removing
+        the mean, might be useful when using the ARIMA model, which should operate on a
+        stationary process.
         """
 
         # Check inputs
@@ -46,14 +55,16 @@ class Forecaster(ABC):
             f"fitted instance of the Smoother class."
 
         # Set parameters
-        self.method = method
-        self.forecast_horizon = forecast_horizon
-        self.smoother = smoother
-        self.arima_orders = arima_orders
-        self.arima_prediction_type = arima_prediction_type
+        self._method = method
+        self._forecast_horizon = forecast_horizon
+        self._smoother = smoother
+        self._arima_orders = arima_orders
+        self._arima_prediction_type = arima_prediction_type
+        self._remove_mean = remove_mean
 
         # Setup
-        self.arima_model = None
+        self._arima_model = None
+        self._mean = 0
 
     def _smooth_forecast_exp(self, time_series: np.ndarray) -> np.ndarray:
         """
@@ -65,11 +76,11 @@ class Forecaster(ABC):
         :return: (NumPy array) The future forecast
         """
 
-        if self.smoother.exp_smoother is None:
-            self.smoother(time_series=time_series)
+        if self._smoother.exp_smoother is None:
+            self._smoother(time_series=time_series)
 
-        forecast = self.smoother.exp_smoother.predict(
-            start=len(time_series), end=(len(time_series) + self.forecast_horizon - 1))
+        forecast = self._smoother.exp_smoother.predict(
+            start=len(time_series), end=(len(time_series) + self._forecast_horizon - 1))
 
         return forecast
 
@@ -83,12 +94,11 @@ class Forecaster(ABC):
         :return: (NumPy array) The future forecast
         """
 
-        if self.smoother.poly is None:
-            self.smoother(time_series=time_series)
+        if self._smoother.poly is None:
+            self._smoother(time_series=time_series)
 
-        x = np.arange(len(time_series),
-                      (len(time_series) + self.forecast_horizon))
-        forecast = self.smoother.poly(x)
+        x = np.arange(len(time_series), (len(time_series) + self._forecast_horizon))
+        forecast = self._smoother.poly(x)
 
         return forecast
 
@@ -104,10 +114,20 @@ class Forecaster(ABC):
         :return: (NumPy array) The future forecast
         """
 
-        if self.smoother.method in ('avg', 'exp', 'holt_winter'):
+        if self._smoother.method in ('exp', 'holt_winter'):
             forecast = self._smooth_forecast_exp(time_series=time_series)
 
-        elif self.smoother.method == 'polyfit':
+        elif self._smoother.method == 'avg':
+            forecast = [np.mean(time_series)]
+            for i in range(1, min(self._forecast_horizon, (len(time_series) - 1))):
+                series = np.concatenate(
+                    [time_series[i:], np.array(forecast)]
+                )
+                forecast.append(np.mean(series))
+
+            forecast = np.array(forecast)
+
+        elif self._smoother.method == 'polyfit':
             forecast = self._smooth_forecast_poly(time_series=time_series)
 
         return forecast
@@ -127,17 +147,20 @@ class Forecaster(ABC):
         :return: (NumPy array) The future forecast
         """
 
-        if self.arima_model is None:
-            self.arima_model = ARIMA(time_series, order=self.arima_orders).fit()
+        if self._arima_model is None:
+            self._arima_model = ARIMA(time_series, order=self._arima_orders).fit()
 
         if prediction_start is None or prediction_end is None:
             prediction_start = len(time_series)
-            prediction_end = len(time_series) + self.forecast_horizon - 1
+            prediction_end = len(time_series) + self._forecast_horizon - 1
 
-        forecast = self.arima_model.predict(start=prediction_start, end=prediction_end,
-                                            typ=self.arima_prediction_type)
+        forecast = self._arima_model.predict(start=prediction_start, end=prediction_end,
+                                             typ=self._arima_prediction_type)
 
         return forecast
+
+    def _sarimax_forecast(self):
+        pass
 
     def forecast(self, time_series: np.ndarray, prediction_start: int = None,
                  prediction_end: int = None) -> np.ndarray:
@@ -157,13 +180,19 @@ class Forecaster(ABC):
         :return: (NumPy array) The future forecast
         """
 
-        if self.method == 'smoother':
-            forecast = self._smooth_forecast(time_series=time_series)
+        if self._remove_mean:
+            self._mean = np.mean(time_series, axis=-1)
+            time_series -= self._mean
 
-        elif self.method == 'arima':
-            forecast = self._arima_forecast(time_series=time_series,
-                                            prediction_start=prediction_start,
-                                            prediction_end=prediction_end)
+        if self._method == 'smoother':
+            forecast = self._smooth_forecast(time_series=time_series) + self._mean
+
+        elif self._method == 'arima':
+            forecast = self._arima_forecast(
+                time_series=time_series,
+                prediction_start=prediction_start,
+                prediction_end=prediction_end,
+            ) + self._mean
 
         return forecast
 
@@ -196,18 +225,33 @@ class Forecaster(ABC):
         :return: (str) Description for the current instance of the Smoother class
         """
 
-        if self.method == 'smoother':
-            description = f"Smoothing based forecast: {self.smoother.description}"
+        if self._method == 'smoother':
+            description = f"Smoothing based forecast: {self._smoother.description}"
 
-        if self.method == 'arima':
-            description = f"ARIMA based forecast: Orders = {self.arima_orders}"
+        if self._method == 'arima':
+            description = f"ARIMA based forecast: Orders = {self._arima_orders}"
 
         return description
 
+    @property
+    def forecast_horizon(self) -> int:
+        """
+        :return: Returns the forecaster future forecast horizon
+        """
 
+        return self._forecast_horizon
 
+    def reset_smoother(self) -> None:
+        """
+        Utility method for resetting the fitted smoother parameters, useful for when
+        performing predictions based on a rolling window.
 
+        :return: None
+        """
 
+        if self._smoother is not None:
+            if self._smoother.method in ('avg', 'exp', 'holt_winter'):
+                self._smoother.exp_smoother = None
 
-
-
+            elif self._smoother.method == 'polyfit':
+                self._smoother.poly = None

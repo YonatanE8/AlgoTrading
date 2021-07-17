@@ -388,7 +388,8 @@ def _load_multiple_assets(
                                                     adjust_prices=adjust_prices)
 
                 except Exception as e:
-                    print(f"Could not load the data for {symbol}")
+                    print(f"Could not load the data for {symbol},"
+                          f"Exception is: {e}")
                     continue
 
                 with open(data_file, 'wb') as f:

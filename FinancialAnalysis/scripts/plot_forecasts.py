@@ -7,60 +7,63 @@ from FinancialAnalysis.visualizations.plot_assets import plot_forecasts
 import os
 import plotly.graph_objs as go
 
-
 # Define data parameters
-symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
-start_date = "2015-12-03"
-end_date = "2020-12-03"
+# symbols_list = ('MSFT', 'DIS', 'JPM', 'C', 'DAL')
+symbols_list = ('MSFT', )
+start_date = "2016-03-10"
+end_date = "2021-03-10"
 quote_channels = ('Close',)
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 # Define Smoother
-# smoother = Smoother(method='avg', length=15)
+# smoother = Smoother(method='avg', length=5)
 # smoother = Smoother(method='exp', alpha=0.6, optimize=False)
 # smoother = Smoother(method='exp', optimize=True)
 # smoother = Smoother(method='holt_winter', trend=None)
-smoother = Smoother(method='polyfit', poly_degree=4)
+smoother = Smoother(method='polyfit', poly_degree=3)
 
 # Define Forecaster
 # method = 'arima'
+# method = 'sarimax'
 method = 'smoother'
-forecast_horizon = 22
-period_length = 66
-
-arima_orders = (5, 2, 1)
+forecast_horizon = 5
+arima_orders = None
+remove_mean = False
 arima_prediction_type = 'levels'
-forecaster = Forecaster(method=method, forecast_horizon=forecast_horizon,
-                        smoother=smoother, arima_orders=arima_orders,
-                        arima_prediction_type=arima_prediction_type)
+forecaster = Forecaster(
+    method=method,
+    forecast_horizon=forecast_horizon,
+    smoother=smoother,
+    arima_orders=arima_orders,
+    arima_prediction_type=arima_prediction_type,
+    remove_mean=remove_mean,
+)
 
 # Plotting parameters
-display_meta_paramets = (
-    'five_years_div_yield',
-    'book2value_ratio',
-    'high_52w',
-    'low_52w',
-    'profit_margins',
-    'trailing_price2earnings',
-)
 if __name__ == '__main__':
     for symbol in symbols_list:
         # Get data
-        quotes, macros = get_asset_data(symbol=symbol, start_date=start_date,
-                                        end_date=end_date,
-                                        quote_channels=quote_channels,
-                                        adjust_prices=adjust_prices,
-                                        cache_path=cache_path)
-        assets_data = quotes[quote_channels[0]]
-        n_periods = len(assets_data) // period_length
-        periods = [assets_data[i * period_length:((i + 1) * period_length)]
-                   for i in range(n_periods)]
+        quotes, macros = get_asset_data(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            quote_channels=quote_channels,
+            adjust_prices=adjust_prices,
+            cache_path=cache_path,
+        )
+        asset_data = quotes[quote_channels[0]]
         dates = quotes['Dates']
+        window_len = 66
 
         # Plot forecast
         figure = go.Figure()
         plot_forecasts(
-            periods=periods, smoother=smoother, forecaster=forecaster,
-            asset_symbol=symbol, dates=dates, asset_meta_data=macros,
-            display_meta_paramets=display_meta_paramets, figure=figure)
+            time_series=asset_data,
+            window_len=window_len,
+            smoother=smoother,
+            forecaster=forecaster,
+            asset_symbol=symbol,
+            dates=dates,
+            figure=figure,
+        )

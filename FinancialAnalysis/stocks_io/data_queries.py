@@ -381,7 +381,8 @@ def _load_multiple_assets(
 
             else:
                 try:
-                    quote, macro = _load_asset_data(symbol=symbol, start_date=start_date,
+                    quote, macro = _load_asset_data(symbol=symbol,
+                                                    start_date=start_date,
                                                     end_date=end_date,
                                                     quote_channels=quote_channels,
                                                     adjust_prices=adjust_prices)
@@ -414,11 +415,14 @@ def _load_multiple_assets(
     # Concatenate the quotes NumPy arrays
     dates = [len(q['Dates']) for q in quotes]
     valid_dates_len = int(np.median(dates))
-    valid_assets = [i for i, q in enumerate(quotes) if len(q['Dates']) >= valid_dates_len]
+    valid_assets = [i for i, q in enumerate(quotes) if
+                    len(q['Dates']) >= valid_dates_len]
     dates = quotes[valid_assets[0]]['Dates'][-valid_dates_len:]
 
     quotes = {
-        channel: np.concatenate([np.expand_dims(quotes[i][channel][-valid_dates_len:], 1) for i in valid_assets], 1)
+        channel: np.concatenate(
+            [np.expand_dims(quotes[i][channel][-valid_dates_len:], 1) for i in
+             valid_assets], 1)
         for channel in quote_channels if channel != 'Dates'
     }
     quotes['Dates'] = dates
@@ -476,8 +480,11 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
         if os.path.isfile(data_file):
             with open(data_file, 'rb') as f:
                 cached_data = pickle.load(f)
-                quotes, macros, valid_symbols = \
-                    cached_data['quotes'], cached_data['macros'], cached_data['valid_symbols']
+                quotes, macros, valid_symbols = (
+                    cached_data['quotes'],
+                    cached_data['macros'],
+                    cached_data['valid_symbols'],
+                )
 
         else:
             quotes, macros, valid_symbols = _load_multiple_assets(
@@ -490,7 +497,14 @@ def get_multiple_assets(symbols_list: (str, ...), start_date: str, end_date: str
             )
 
             with open(data_file, 'wb') as f:
-                pickle.dump(obj={'quotes': quotes, 'macros': macros, "valid_symbols": valid_symbols}, file=f)
+                pickle.dump(
+                    obj={
+                        'quotes': quotes,
+                        'macros': macros,
+                        "valid_symbols": valid_symbols,
+                    },
+                    file=f,
+                )
 
     else:
         quotes, macros, valid_symbols = _load_multiple_assets(

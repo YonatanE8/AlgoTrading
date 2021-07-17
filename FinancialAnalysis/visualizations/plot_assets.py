@@ -10,7 +10,7 @@ import plotly.graph_objs as go
 
 def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
                    plotting_params: Dict = None, figure: go.Figure = None,
-                   show: bool = True):
+                   line_color: str = None, show: bool = True):
     """
     A utility method for plotting multiple 2d lines on a joint figure, using the Plotly
     package.
@@ -22,6 +22,7 @@ def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
     :param plotting_params: Meta parameters for the entire figure, i.e.:
      xlabel, ylable, title, legend, etc.
     :param figure: Plotly Figure object to plot on, if None generates new figure
+    :param line_color: (str) A specific line color to use for plotting
     :param show: (bool) Whether to display the figure or not.
 
     :return: None
@@ -54,6 +55,7 @@ def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
                     plotting_params['meta_data'][i]
                     if 'meta_data' in plotting_params else ''
                 ),
+                line=None if line_color is None else dict(color=line_color)
             )
         )
         for i in range(len(x_axes))
@@ -71,15 +73,10 @@ def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
         figure.show()
 
 
-def plot_assets_list(
-        assets_symbols: tuple,
-        assets_data: list,
-        dates: list,
-        assets_meta_data: list = None,
-        display_meta_paramets: Tuple[str, ...] = tuple(),
-        figure: go.Figure = None,
-        show: bool = True,
-):
+def plot_assets_list(assets_symbols: Sequence, assets_data: Sequence, dates: Sequence,
+                     assets_meta_data: Sequence = None,
+                     display_meta_paramets: Sequence[str] = tuple(),
+                     figure: go.Figure = None, show: bool = True):
     """
     A method for plotting a list of tradable equities
 
@@ -136,9 +133,9 @@ def plot_assets_list(
 
 
 def plot_smooth_assets_list(
-        assets_symbols: tuple, assets_data: list, dates: list,
-        smoothers: (Smoother, ...), assets_meta_data: list = None,
-        display_meta_paramets: Tuple[str, ...] = tuple(),
+        assets_symbols: Sequence, assets_data: Sequence, dates: Sequence,
+        smoothers: (Smoother, ...), assets_meta_data: Sequence = None,
+        display_meta_paramets: Sequence[str] = tuple(),
         figure: go.Figure = None, show: bool = True):
     """
     A method for plotting a list of tradable equities after smoothening.
@@ -197,16 +194,21 @@ def plot_smooth_assets_list(
         figure.show()
 
 
-def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
-                   forecaster: Forecaster, asset_symbol: str,
-                   dates: list, asset_meta_data: dict,
-                   display_meta_paramets: Tuple[str, ...] = tuple(),
-                   figure: go.Figure = None, show: bool = True):
+def plot_forecasts(
+        time_series: np.ndarray,
+        window_len: int,
+        forecaster: Forecaster,
+        asset_symbol: str,
+        dates: Sequence,
+        smoother: Smoother = None,
+        figure: go.Figure = None,
+        show: bool = True,
+):
     """
-    A method for plotting forecasts for a list of tradable equity after smoothening.
+    A method for plotting forecasts for a single asset.
 
-    :param periods: (Tuple) tuple of NumPy arrays, each denoting a period to perform
-    forecasting on, should be of length of at least 2 periods.
+    :param time_series: (np.ndarray) The original time series to plot and analyze.
+    :param window_len: (int) Length of each window for the forecaster to analyze.
     :param smoother: (Smoother) A smoother object to use on each period
     :param forecaster: (Forecaster) A forecaster object to calculate the forecast over
     the period
@@ -214,58 +216,74 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
     of the asset to be plotted
     :param dates: (list) A list of strings, denoting the dates for which
     the quotes are given
-    :param asset_meta_data: (dict) A dict containing the macro data for
-    the asset to be plotted
-    :param display_meta_paramets: (Tuple) A tuple of string, denoting the meta
-    parameters to display for each asset.
     :param figure: Plotly Figure object to plot on, if None generates new figure
     :param show: (bool) Whether to display the figure or not.
 
     :return: None
     """
 
+    # Plot raw + smoothed data if applicable
     figure = figure if figure is not None else go.Figure()
-    plot_smooth_assets_list(
-        assets_symbols=tuple(f"{asset_symbol}: Forecast period {i}"
-                             for i in range(len(periods))),
-        assets_data=periods,
-        dates=dates,
-        assets_meta_data=None,
-        smoothers=(smoother,),
-        display_meta_paramets=display_meta_paramets,
-        figure=figure,
-        show=False,
-    )
 
-    x_axes = []
-    y_axes = []
-    names = []
+    if smoother is not None:
+        plot_smooth_assets_list(
+            assets_symbols=(asset_symbol, ),
+            assets_data=(time_series, ),
+            dates=dates,
+            smoothers=(smoother,),
+            figure=figure,
+            show=False,
+        )
+
+    else:
+        plot_assets_list(
+            assets_symbols=(asset_symbol, ),
+            assets_data=(time_series, ),
+            dates=dates,
+            figure=figure,
+            show=False,
+        )
+
     # Add the dates for the final forecast period
     dates = [datetime.strptime(date, "%Y-%m-%d") for date in dates]
-    new_dates = [(dates[-1] + timedelta(days=1)), ]
-    for f in range((len(periods[-1]) - 1)):
+    new_dates = [(dates[-1] + timedelta(days=1))]
+    for f in range(forecaster.forecast_horizon - 1):
         new_dates.append((new_dates[-1] + timedelta(days=1)))
 
     dates.extend(new_dates)
 
-    for i, period in enumerate(periods[1:]):
-        period = np.concatenate(periods[:i + 1])
-        smoothed = smoother(period)
+    # Compute forecasts
+    n_windows = len(time_series) - window_len
+    x_axes = []
+    y_axes = []
+    names = []
+    for i in range(n_windows):
+        series_to_analyze = time_series[i:(i + window_len)]
+        forecaster.reset()
+        forecast = forecaster.forecast(series_to_analyze)
 
-        forecaster.smoother = smoother
-        forecaster.arima_model = None
-        forecast = forecaster(smoothed)
-
-        x_axes.append(new_dates[-len(forecast):])
-        y_axes.append(forecast)
-        names.append(f"{forecaster.description}")
+        x_axes.append(
+            dates[(i + window_len - 1): (i + window_len + forecaster.forecast_horizon)]
+        )
+        y_axes.append(
+            np.concatenate(
+                [np.array([series_to_analyze[-1]]), forecast],
+                axis=0)
+        )
+        names.append(f"Forecast Period {i + 1}")
 
     # Plot all forecasts
     plotting_params = {
         'legend': names,
     }
-    _plot_2d_lines(x_axes=x_axes, y_axes=y_axes, plotting_params=plotting_params,
-                   figure=figure, show=False)
+    _plot_2d_lines(
+        x_axes=x_axes,
+        y_axes=y_axes,
+        plotting_params=plotting_params,
+        figure=figure,
+        line_color='black',
+        show=False,
+    )
 
     if show:
         figure.show()

@@ -1,5 +1,5 @@
-from src import PROJECT_ROOT
-from setuptools import setup
+from FinancialAnalysis import PROJECT_ROOT
+from setuptools import setup, find_packages
 
 import os
 
@@ -17,12 +17,12 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/YonatanE8/AlgoTrading",
     package_dir={
-        'FinancialAnalysis': os.path.join(f'{os.getcwd()}', "FinancialAnalysis")
+        'FinancialAnalysis': os.getcwd(),
     },
     packages=find_packages(
         where=f'{os.getcwd()}',
         include=['FinancialAnalysis', ],
-        exclude=['tests', 'notebooks', 'data']
+        exclude=['data']
     ),
     install_requires=[
         'beautifulsoup4',

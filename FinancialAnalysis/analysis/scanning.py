@@ -299,12 +299,14 @@ class Scanner(ABC):
 
         return True
 
-    def scan_for_potential_assets(self) -> List[Tuple[int, str]]:
+    def scan_for_potential_assets(self, ignore_none: bool = True) -> List[Tuple[int, str]]:
         """
         The main method to be used by a user in the Scanner class. After all macro &
         quotes criterions have been specified, scan all assets given in construction
         over the specified temporal period, and detect all asset that fit the
         required criterions.
+
+        :param ignore_none: (bool) Whether to ignore Missing macro values or not. Default is True.
 
         :return: (list) A list of string, containing the trade symbols of all suitable
         assets.
@@ -329,7 +331,7 @@ class Scanner(ABC):
             )
 
             macro_criterion = self._test_macro_criterion(
-                asset_macro=macro, current_price=self.quotes[-1, i], ignore_none=True)
+                asset_macro=macro, current_price=self.quotes[-1, i], ignore_none=ignore_none)
 
             quote_criterion = self._test_quote_criterion(
                 asset_quote_stats=quotes_criterions) \

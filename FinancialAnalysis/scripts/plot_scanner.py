@@ -1,4 +1,4 @@
-from analysis.analyzing import Analyzer
+from FinancialAnalysis.analysis.analyzing import Analyzer
 from FinancialAnalysis import PROJECT_ROOT
 from FinancialAnalysis.analysis.scanning import Scanner
 from FinancialAnalysis.visualizations.plot_assets import plot_assets_list
@@ -14,30 +14,32 @@ sp500_symbols, sp500_names = get_sp500_symbols_wiki()
 nasdaq100_symbols, nasdaq100_names = get_nasdaq100_symbols_wiki()
 
 symbols_list = tuple(sp500_symbols + nasdaq100_symbols)
-start_date = "2016-02-25"
-end_date = "2021-02-25"
+start_date = "2016-07-16"
+end_date = "2021-07-16"
 quote_channel = 'Close'
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
-    # 'five_years_div_yield': (2., 10.),
-    'trailing_price2earnings': (5., 40.),
-    'book2value_ratio': (0.5, 40.),
+    # 'five_years_div_yield': (1., 10.),
+    'trailing_price2earnings': (5., 35.),
+    'book2value_ratio': (0.5, 35.),
     # 'high_52w': (1.2, 1.5),
-    # 'low_52w': (0.7, 0.9),
+    # 'low_52w': (0.6, 0.8),
 }
 quote_criterions = {
     # 'sr': (2., 4.),
-    'linear_regression_fit': (None, None, 0.7)
+    'linear_regression_fit': (None, None, 0.9)
 }
 
+trend_period_length = 15
 analyzer = Analyzer(
     symbols_list=symbols_list,
     start_date=start_date,
     end_date=end_date,
     quote_channel=quote_channel,
     adjust_prices=adjust_prices,
+    trend_period_length=trend_period_length,
     cache_path=cache_path,
 )
 scanner = Scanner(
@@ -53,7 +55,8 @@ scanner = Scanner(
 scanner.set_macro_criterions(macro_criterions)
 scanner.set_quote_criterions(quote_criterions)
 
-potential_assets = scanner.scan_for_potential_assets()
+ignore_none = False
+potential_assets = scanner.scan_for_potential_assets(ignore_none=ignore_none)
 assert len(potential_assets)
 
 potential_quotes = [scanner.quotes[:, i] for i, _ in potential_assets]

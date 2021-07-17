@@ -60,7 +60,7 @@ def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
     ]
 
     figure.update_layout(
-        title=(plotting_params['title']if 'title' in plotting_params else ''),
+        title=(plotting_params['title'] if 'title' in plotting_params else ''),
         xaxis={'title': plotting_params['xlabel']
         if 'xlabel' in plotting_params else 'X Label'},
         yaxis={'title': plotting_params['ylabel']
@@ -71,10 +71,15 @@ def _plot_2d_lines(x_axes: Sequence[Sequence], y_axes: Sequence[Sequence],
         figure.show()
 
 
-def plot_assets_list(assets_symbols: tuple, assets_data: list, dates: list,
-                     assets_meta_data: list = None,
-                     display_meta_paramets: Tuple[str, ...] = tuple(),
-                     figure: go.Figure = None, show: bool = True):
+def plot_assets_list(
+        assets_symbols: tuple,
+        assets_data: list,
+        dates: list,
+        assets_meta_data: list = None,
+        display_meta_paramets: Tuple[str, ...] = tuple(),
+        figure: go.Figure = None,
+        show: bool = True,
+):
     """
     A method for plotting a list of tradable equities
 
@@ -226,7 +231,7 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
         assets_data=periods,
         dates=dates,
         assets_meta_data=None,
-        smoothers=(smoother, ),
+        smoothers=(smoother,),
         display_meta_paramets=display_meta_paramets,
         figure=figure,
         show=False,
@@ -255,7 +260,6 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
         y_axes.append(forecast)
         names.append(f"{forecaster.description}")
 
-
     # Plot all forecasts
     plotting_params = {
         'legend': names,
@@ -265,4 +269,3 @@ def plot_forecasts(periods: (np.ndarray, ...), smoother: Smoother,
 
     if show:
         figure.show()
-

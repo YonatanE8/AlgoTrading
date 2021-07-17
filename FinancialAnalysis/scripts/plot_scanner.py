@@ -22,8 +22,8 @@ cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
     # 'five_years_div_yield': (1., 10.),
-    'trailing_price2earnings': (5., 35.),
-    'book2value_ratio': (0.5, 35.),
+    'trailing_price2earnings': (1., 30.),
+    'book2value_ratio': (0.5, 10.),
     # 'high_52w': (1.2, 1.5),
     # 'low_52w': (0.6, 0.8),
 }

@@ -20,3 +20,4 @@ if str(PROJECT_ROOT).startswith(os.getcwd()):
     PROJECT_ROOT = PROJECT_ROOT.relative_to(os.getcwd())
 
 SRC_ROOT = PROJECT_ROOT.joinpath('src')
+DATA_ROOT = os.path.join(PROJECT_ROOT, 'data')

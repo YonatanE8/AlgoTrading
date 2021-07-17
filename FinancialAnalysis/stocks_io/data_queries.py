@@ -387,7 +387,7 @@ def _load_multiple_assets(
                                                     quote_channels=quote_channels,
                                                     adjust_prices=adjust_prices)
 
-                except:
+                except Exception as e:
                     print(f"Could not load the data for {symbol}")
                     continue
 

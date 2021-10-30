@@ -86,6 +86,7 @@ class Analyzer(ABC):
         self.symbols_list = valid_symbols
         self.quotes = interpolated_quotes.T
         self.returns = self._compute_returns(self.quotes)
+        self.cumulative_returns = (self.returns + 1).prod(axis=0)
 
         # Query the risk free asset
         risk_free_asset, _ = get_asset_data(symbol=risk_free_asset_symbol,
@@ -470,6 +471,38 @@ class Analyzer(ABC):
 
         return results
 
+    @property
+    def top_k_performers(self) -> np.ndarray:
+        """
+        Class property, the top K performers
+
+        :return: (np.ndarray) An array with shapes (# Assets), containing the
+        the sorted indices of the top performers
+        """
+
+        argsort = np.argsort(self.cumulative_returns)[::-1]
+        indices = np.zeros_like(argsort)
+        for i, ind in enumerate(argsort):
+            indices[ind] = i
+
+        return indices
+
+    @property
+    def bottom_k_performers(self) -> np.ndarray:
+        """
+        Class property, the bottom K performers
+
+        :return: (np.ndarray) An array with shapes (# Assets), containing the
+        the sorted indices of the bottom performers
+        """
+
+        argsort = np.argsort(self.cumulative_returns)
+        indices = np.zeros_like(argsort)
+        for i, ind in enumerate(argsort):
+            indices[ind] = i
+
+        return indices
+
     def analyze(self, quotes: np.ndarray = None) -> dict:
         """
         The main method to use in the Analyzer class. It runs all currently available
@@ -487,6 +520,8 @@ class Analyzer(ABC):
         specified in the constructor.
         'periodicity': Linear combinations of sin functions based on Welch's
         power-spectrum estimation, which should fit each asset.
+        'top_k': Top K average performers
+        'bottom_k': Bottom K average performers
         """
 
         # Check inputs
@@ -506,6 +541,8 @@ class Analyzer(ABC):
         mean_annual_returns = self.mean_annual_return
         trend_mean, trend_std = self._returns_emerging_trend(quotes=quotes)
         linear_regression_fit = self.linear_regression_fit()
+        top_k = self.top_k_performers
+        bottom_k = self.bottom_k_performers
 
         analysis = {
             'sr': sr,
@@ -514,6 +551,8 @@ class Analyzer(ABC):
             'recent_trend_std': trend_std,
             # 'periodicity': periodicity,
             'linear_regression_fit': linear_regression_fit,
+            'top_k': top_k,
+            'bottom_k': bottom_k,
         }
 
         return analysis

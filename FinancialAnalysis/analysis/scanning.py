@@ -11,10 +11,17 @@ class Scanner(ABC):
     macro_criterions in order to automatically detect promising assets for investment.
     """
 
-    def __init__(self, symbols_list: (str, ...), start_date: str, end_date: str,
-                 quote_channel: str, adjust_prices: bool = True,
-                 smoother: Smoother = None, analyzer: Analyzer = None,
-                 cache_path: str = None):
+    def __init__(
+            self,
+            symbols_list: (str, ...),
+            start_date: str,
+            end_date: str,
+            quote_channel: str,
+            adjust_prices: bool = True,
+            smoother: Smoother = None,
+            analyzer: Analyzer = None,
+            cache_path: str = None,
+    ):
         """
         Constructor method for the scanner object.
 
@@ -76,8 +83,14 @@ class Scanner(ABC):
         self.macro_criterions = {}
 
         self._viable_quote_criterions = [
-            'sr', 'mean', 'recent_trend_mean', 'recent_trend_std',
-            'overall_period_return', 'linear_regression_fit',
+            'sr',
+            'mean',
+            'recent_trend_mean',
+            'recent_trend_std',
+            'overall_period_return',
+            'linear_regression_fit',
+            'top_k',
+            'bottom_k',
         ]
         self.quote_criterions = {}
 
@@ -292,6 +305,13 @@ class Scanner(ABC):
 
                 return cond
 
+            elif criterion == 'top_k' or criterion == 'bottom_k':
+                if asset_quote_stats[criterion] < self.quote_criterions[criterion]:
+                    return True
+
+                else:
+                    return False
+
             elif (asset_quote_stats[criterion] < self.quote_criterions[criterion][0] or
                   asset_quote_stats[criterion] > self.quote_criterions[criterion][
                       1]):
@@ -333,9 +353,10 @@ class Scanner(ABC):
             macro_criterion = self._test_macro_criterion(
                 asset_macro=macro, current_price=self.quotes[-1, i], ignore_none=ignore_none)
 
-            quote_criterion = self._test_quote_criterion(
-                asset_quote_stats=quotes_criterions) \
+            quote_criterion = (
+                self._test_quote_criterion(asset_quote_stats=quotes_criterions)
                 if quotes_criterions is not None else True
+            )
 
             if quote_criterion and macro_criterion:
                 symbols.append((i, symbol))

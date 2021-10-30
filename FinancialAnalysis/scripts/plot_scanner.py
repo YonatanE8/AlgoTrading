@@ -14,25 +14,26 @@ sp500_symbols, sp500_names = get_sp500_symbols_wiki()
 nasdaq100_symbols, nasdaq100_names = get_nasdaq100_symbols_wiki()
 
 symbols_list = tuple(sp500_symbols + nasdaq100_symbols)
-start_date = "2016-07-16"
-end_date = "2021-07-16"
+start_date = "2016-10-27"
+end_date = "2021-10-27"
 quote_channel = 'Close'
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
     # 'five_years_div_yield': (1., 10.),
-    'trailing_price2earnings': (1., 30.),
-    'book2value_ratio': (0.5, 10.),
-    # 'high_52w': (1.2, 1.5),
+    # 'trailing_price2earnings': (20., 50.),
+    # 'book2value_ratio': (0.5, 25.),
+    # 'high_52w': (1.25, 2.0),
     # 'low_52w': (0.6, 0.8),
 }
 quote_criterions = {
     # 'sr': (2., 4.),
-    'linear_regression_fit': (None, None, 0.9)
+    'bottom_k': 10,
+    # 'linear_regression_fit': (None, None, 0.8)
 }
 
-trend_period_length = 15
+trend_period_length = 1200
 analyzer = Analyzer(
     symbols_list=symbols_list,
     start_date=start_date,

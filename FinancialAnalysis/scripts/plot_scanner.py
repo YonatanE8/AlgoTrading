@@ -14,26 +14,27 @@ sp500_symbols, sp500_names = get_sp500_symbols_wiki()
 nasdaq100_symbols, nasdaq100_names = get_nasdaq100_symbols_wiki()
 
 symbols_list = tuple(sp500_symbols + nasdaq100_symbols)
-start_date = "2016-10-27"
-end_date = "2021-10-27"
+start_date = "2017-01-14"
+end_date = "2022-01-14"
 quote_channel = 'Close'
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
-    # 'five_years_div_yield': (1., 10.),
-    # 'trailing_price2earnings': (20., 50.),
+    # 'five_years_div_yield': (0.2, 10.),
+    'trailing_price2earnings': (0., 15.),
     # 'book2value_ratio': (0.5, 25.),
     # 'high_52w': (1.25, 2.0),
     # 'low_52w': (0.6, 0.8),
 }
 quote_criterions = {
     # 'sr': (2., 4.),
-    'bottom_k': 10,
+    # 'bottom_k': 75,
+    'top_k': 250,
     # 'linear_regression_fit': (None, None, 0.8)
 }
 
-trend_period_length = 1200
+trend_period_length = 60
 analyzer = Analyzer(
     symbols_list=symbols_list,
     start_date=start_date,
@@ -68,4 +69,9 @@ plot_assets_list(
     assets_data=potential_quotes,
     dates=scanner.dates,
     assets_meta_data=potential_macros,
+    display_meta_paramets=(
+        'dividend_rate',
+        'five_years_div_yield',
+        'trailing_price2earnings',
+    ),
 )

@@ -256,19 +256,27 @@ class Scanner(ABC):
                     return False
 
             elif not isinstance(asset_macro[criterion], str):
-                if (criterion not in asset_macro or
+                if (
+                        criterion not in asset_macro or
                         criterion in relative_fields and
-                        ((asset_macro[criterion] / current_price) <
-                         self.macro_criterions[criterion][0] or
-                         (asset_macro[criterion] / current_price) >
-                         self.macro_criterions[criterion][1])
+                        (
+                                (asset_macro[criterion] / current_price) <
+                                self.macro_criterions[criterion][0] or
+                                (asset_macro[criterion] / current_price) >
+                                self.macro_criterions[criterion][1]
+                        )
                 ):
                     return False
 
-                elif (criterion not in asset_macro or
-                      (criterion not in relative_fields and
-                       (asset_macro[criterion] < self.macro_criterions[criterion][0] or
-                        asset_macro[criterion] > self.macro_criterions[criterion][1]))
+                elif (
+                        criterion not in asset_macro or
+                        (
+                                criterion not in relative_fields and
+                                (
+                                        asset_macro[criterion] < self.macro_criterions[criterion][0] or
+                                        asset_macro[criterion] > self.macro_criterions[criterion][1]
+                                )
+                        )
                 ):
                     return False
 

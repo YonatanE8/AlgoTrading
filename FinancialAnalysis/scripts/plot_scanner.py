@@ -63,7 +63,7 @@ scanner = Scanner(
 )
 
 scanner.set_macro_criterions(macro_criterions)
-scanner.set_quote_criterions(quote_criterions)
+# scanner.set_quote_criterions(quote_criterions)
 
 ignore_none = False
 potential_assets = scanner.scan_for_potential_assets(ignore_none=ignore_none)

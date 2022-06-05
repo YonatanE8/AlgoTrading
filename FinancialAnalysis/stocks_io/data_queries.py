@@ -257,10 +257,10 @@ def _load_asset_data(symbol: str, start_date: str, end_date: str = None,
             None
         ),
         'percent_held_by_institutions': (
-            info['heldPercentInstitutions'] if 'heldPercentInstitutions' in info else None,
+            info['heldPercentInstitutions'] if 'heldPercentInstitutions' in info else None
         ),
         'percent_held_by_insiders': (
-            info['heldPercentInsiders'] if 'heldPercentInsiders' in info else None,
+            info['heldPercentInsiders'] if 'heldPercentInsiders' in info else None
         ),
         'price2earnings_growth_ratio': info['pegRatio'] if 'pegRatio' in info else None,
         'trailing_div_yield': info['trailingAnnualDividendYield'] if 'trailingAnnualDividendYield' in info else None,

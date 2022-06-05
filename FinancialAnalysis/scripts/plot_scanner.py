@@ -14,23 +14,31 @@ sp500_symbols, sp500_names = get_sp500_symbols_wiki()
 nasdaq100_symbols, nasdaq100_names = get_nasdaq100_symbols_wiki()
 
 symbols_list = tuple(sp500_symbols + nasdaq100_symbols)
-start_date = "2017-01-14"
-end_date = "2022-01-14"
+start_date = "2017-06-03"
+end_date = "2022-06-03"
 quote_channel = 'Close'
 adjust_prices = True
 cache_path = os.path.join(PROJECT_ROOT, 'data')
 
 macro_criterions = {
-    # 'five_years_div_yield': (0.2, 10.),
-    'trailing_price2earnings': (0., 15.),
-    # 'book2value_ratio': (0.5, 25.),
-    # 'high_52w': (1.25, 2.0),
+    'five_years_div_yield': (0.1, 10.),
+    'trailing_price2earnings': (0., 20.),
+    # 'book2value_ratio': (0.5, 15.),
+    # 'high_52w': (1.5, 2.0),
     # 'low_52w': (0.6, 0.8),
+    'operating_margins': (0.2, 1.),
+    'quick_ratio': (1.5, 5.),
+    'current_ratio': (1.5, 5.),
+    'enterprise2ebitda': (1., 10),
+    'short_ratio': (0., 5.),
+    'target_mean_price_ratio': (1.1, 2.),
+    'percent_held_by_insiders': (0.1, 1),
+    'price2earnings_growth_ratio': (0., 2.),
 }
 quote_criterions = {
     # 'sr': (2., 4.),
     # 'bottom_k': 75,
-    'top_k': 250,
+    # 'top_k': 250,
     # 'linear_regression_fit': (None, None, 0.8)
 }
 

@@ -192,22 +192,81 @@ def _load_asset_data(symbol: str, start_date: str, end_date: str = None,
         'sector': info['sector'] if 'sector' in info else None,
         'beta': info['beta'] if 'beta' in info else None,
         'dividend_rate': info['dividendRate'] if 'dividendRate' in info else None,
-        'five_years_div_yield': (info['fiveYearAvgDividendYield']
-                                 if 'fiveYearAvgDividendYield' in info else None),
+        'five_years_div_yield': (
+            info['fiveYearAvgDividendYield'] if 'fiveYearAvgDividendYield' in info else None
+        ),
         'trailing_price2earnings': info['trailingPE'] if 'trailingPE' in info else None,
-        'trailing_price2sales': (info['priceToSalesTrailing12Months']
-                                 if 'priceToSalesTrailing12Months' in info else None),
-        'book2value_ratio': info['priceToBook'] if 'priceToBook' in info else None,
+        'trailing_price2sales': (
+            info['priceToSalesTrailing12Months'] if 'priceToSalesTrailing12Months' in info else None
+        ),
+        'forward_price2earnings': info['forwardPE'] if 'forwardPE' in info else None,
+
+        'price2book': info['priceToBook'] if 'priceToBook' in info else None,
         'profit_margins': info['profitMargins'] if 'profitMargins' in info else None,
         'high_52w': info['fiftyTwoWeekHigh'] if 'fiftyTwoWeekHigh' in info else None,
         'low_52w': info['fiftyTwoWeekLow'] if 'fiftyTwoWeekLow' in info else None,
         'change_52w': info['52WeekChange'] if '52WeekChange' in info else None,
-        'last_dividend_date': (datetime.fromtimestamp(info['lastDividendDate'])
-                               if ('lastDividendDate' in info and
-                                   isinstance(info['lastDividendDate'], int))
-                               else None),
-        'earnings_quarterly_growth': (info['earningsQuarterlyGrowth']
-                                      if 'earningsQuarterlyGrowth' in info else None),
+        'last_dividend_date': (
+            datetime.fromtimestamp(info['lastDividendDate'])
+            if ('lastDividendDate' in info and isinstance(info['lastDividendDate'], int)) else
+            None
+        ),
+        'earnings_quarterly_growth': (
+            info['earningsQuarterlyGrowth'] if 'earningsQuarterlyGrowth' in info else None
+        ),
+        'yield': info['yield'] if 'yield' in info else None,
+        'quarterly_revenue_growth': info['revenueQuarterlyGrowth'] if 'revenueQuarterlyGrowth' in info else None,
+        'gross_margins': info['grossMargins'] if 'grossMargins' in info else None,
+        'operating_margins': info['operatingMargins'] if 'operatingMargins' in info else None,
+        'revenue_growth': info['revenueGrowth'] if 'revenueGrowth' in info else None,
+        'analysts_recommendation': info['recommendationKey'] if 'recommendationKey' in info else None,
+        'earnings_growth': info['earningsGrowth'] if 'earningsGrowth' in info else None,
+        'roa': info['returnOnAssets'] if 'returnOnAssets' in info else None,
+        'roe': info['returnOnEquity'] if 'returnOnEquity' in info else None,
+        '3Y_beta': info['beta3Year'] if 'beta3Year' in info else None,
+        '3Y_avg_return': info['threeYearAverageReturn'] if 'threeYearAverageReturn' in info else None,
+        '5Y_avg_return': info['fiveYearAverageReturn'] if 'threeYearAverageReturn' in info else None,
+        'debt2equity': info['debtToEquity'] if 'debtToEquity' in info else None,
+        'quick_ratio': info['quickRatio'] if 'quickRatio' in info else None,
+        'current_ratio': info['currentRatio'] if 'quickRatio' in info else None,
+        'enterprise2ebitda': info['enterpriseToEbitda'] if 'enterpriseToEbitda' in info else None,
+        'forward_eps': info['forwardEps'] if 'forwardEps' in info else None,
+        'trailing_eps': info['trailingEps'] if 'trailingEps' in info else None,
+        'short_ratio': info['shortRatio'] if 'shortRatio' in info else None,
+        'shortPercentOfFloat': info['shortPercentOfFloat'] if 'shortPercentOfFloat' in info else None,
+        'current_shorted_shares_ratio': (
+            info['sharesShort'] / info['sharesOutstanding']
+            if 'sharesShort' in info and 'sharesOutstanding' in info else
+            None
+        ),
+        'total_cash_per_share': info['totalCashPerShare'] if 'totalCashPerShare' in info else None,
+        'revenue_per_share': info['revenuePerShare'] if 'revenuePerShare' in info else None,
+        'target_low_price_ratio': (
+            info['targetLowPrice'] / info['currentPrice']
+            if 'targetLowPrice' in info and 'currentPrice' in info else
+            None
+        ),
+        'target_median_price_ratio': (
+            info['targetMedianPrice'] / info['currentPrice']
+            if 'targetMedianPrice' in info and 'currentPrice' in info else
+            None
+        ),
+        'target_mean_price_ratio': (
+            info['targetMeanPrice'] / info['currentPrice']
+            if 'targetMeanPrice' in info and 'currentPrice' in info else
+            None
+        ),
+        'percent_held_by_institutions': (
+            info['heldPercentInstitutions'] if 'heldPercentInstitutions' in info else None,
+        ),
+        'percent_held_by_insiders': (
+            info['heldPercentInsiders'] if 'heldPercentInsiders' in info else None,
+        ),
+        'price2earnings_growth_ratio': info['pegRatio'] if 'pegRatio' in info else None,
+        'trailing_div_yield': info['trailingAnnualDividendYield'] if 'trailingAnnualDividendYield' in info else None,
+        'trailing_div_rate': info['trailingAnnualDividendRate'] if 'trailingAnnualDividendRate' in info else None,
+        'div_rate': info['dividendRate'] if 'dividendRate' in info else None,
+        'payout_ratio': info['payoutRatio'] if 'payoutRatio' in info else None,
     }
 
     # Query historical quote prices
